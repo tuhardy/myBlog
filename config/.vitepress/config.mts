@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress'
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   base: '/myBlog/',   // 👈 加上这一行，与仓库名保持一致
-  srcDir: "..\\docs",
+  srcDir: "../docs",
   
   title: "My blog",
   description: "a website of mine",
