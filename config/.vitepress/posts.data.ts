@@ -4,16 +4,23 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /**
- * 最新文章列表：构建期自动扫描 docs/**/*.md，按「git 最后提交时间」倒序取前 3。
+ * 最新文章列表：构建期自动扫描 docs 目录下所有 md 文件，按「git 最后提交时间」倒序取前 3。
  *
  * 设计要点：
  * 1) 不依赖 Frontmatter.date，全部用 git commit 时间作为「真实时间」。
- *    命令：git log -1 --format=%cI -- <file>
+ *    命令：git log -1 --format=%cI -- 文件路径
  *    输出：ISO 8601 带时区，形如 2026-08-25T22:36:00+08:00，符合用户需求。
- * 2) 排除目录 index 入口、首页本身、脚手架示例 /markdown-examples / /api-examples。
+ * 2) 排除目录 index 入口、首页本身、脚手架示例 markdown-examples 与 api-examples。
  * 3) 时间相同时按 url 字母序兜底，保证排序稳定可预测。
- * 4) dev 模式下未 commit 的文件 git log 取不到值，fallback 为空串，
- *    这些文件会沉到列表底部；commit 一次后即可正常排序。
+ * 4) 摘要 = **保留原本 Markdown 布局结构的富文本 HTML**（非纯文本）：
+ *    优先级：
+ *      a. 用户在 Frontmatter 写 excerpt: xxx → 当作纯文本包 <p>
+ *      b. 正文里放了 <!-- more --> → 该标记之前的完整 Markdown 渲染为 HTML（首选，结构最真实）
+ *      c. 没写 more 时 → excerptLength: 400 自动截取前 400 字符，VitePress 内部渲染 HTML
+ * 5) dev 模式下未 commit 的文件 git log 取不到值，fallback 为空串。
+ *
+ * 注意：本文件注释里不要写「星号星号斜杠」之类的 glob 模式，
+ * 否则会被 JS 解析器误认为注释结束符，导致 parse error。
  */
 
 // posts.data.ts 位于 config/.vitepress/，docs 在它的上两级 + docs/
@@ -26,13 +33,12 @@ const docsRoot = path.resolve(__dirname, '../../docs')
  */
 function getGitLastCommitISO(relativePath: string): string {
   try {
-    // %cI = committer date, strict ISO 8601 格式
-    // cwd 必须是 git 仓库根目录，否则 git log 失败
     const absPath = path.join(docsRoot, relativePath)
-    const out = execSync(`git log -1 --format=%cI -- ${JSON.stringify(absPath)}`, {
+    const cmd = `git log -1 --format=%cI -- "${absPath}"`
+    const out = execSync(cmd, {
       encoding: 'utf-8',
       cwd: docsRoot,
-      stdio: ['pipe', 'pipe', 'ignore'], // 静默 stderr，文件没 commit 时不报红
+      stdio: ['pipe', 'pipe', 'ignore'],
     })
     return out.trim()
   } catch {
@@ -40,58 +46,122 @@ function getGitLastCommitISO(relativePath: string): string {
   }
 }
 
-export default createContentLoader('**/*.md', {
-  transform(raw) {
-    const excludeSet = new Set(['/markdown-examples', '/api-examples'])
+/**
+ * 从 VitePress createContentLoader 的 page.url 反推 srcDir 下的相对文件路径。
+ * 例：/frontend/getting-started.html → frontend/getting-started.md
+ */
+function urlToRelativePath(url: string): string {
+  return url.replace(/^\//, '').replace(/\.html?$/, '.md')
+}
 
+/** 简易 HTML 转义（仅用于 frontmatter.excerpt 直接包 <p> 的场景） */
+function escapeHtml(s: string): string {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+/**
+ * 生成「保留原文布局结构」的富文本摘要 HTML。
+ * 全部交给 VitePress 内部 markdown-it 引擎渲染，避免自己 strip 丢失格式。
+ */
+function buildExcerptHtml(p: { frontmatter?: any; excerpt?: unknown }): string {
+  // 首选：VitePress 生成的 excerpt（HTML 片段）
+  // 来源 = 用户写了 <!-- more -->，或没写时由 excerptLength 自动截取后渲染
+  if (p.excerpt) {
+    const t = String(p.excerpt).trim()
+    if (t) return t
+  }
+  // 兜底：Frontmatter 中用户手写 excerpt（当作纯文本包 <p>）
+  if (p.frontmatter?.excerpt) {
+    const t = String(p.frontmatter.excerpt).trim()
+    return t ? `<p>${escapeHtml(t)}</p>` : ''
+  }
+  return ''
+}
+
+export default createContentLoader('**/*.md', {
+  includeSource: true,  // 保留，后续如果需要自定义处理正文兜底可用
+  excerpt: true,        // 开启 excerpt 机制：解析 Frontmatter.excerpt + <!-- more -->
+  excerptLength: 800,   // 用户没写 <!-- more --> 时，自动取前 800 字符 Markdown 渲染为 HTML（给足 2~3 个完整段落空间，避免切到半截句子）
+  transform(raw) {
     return raw
       .filter((p) => {
-        // 去掉首页本身
-        if (p.url === '/') return false
-        // 去掉目录 index 入口（VitePress 把 foo/index.md 渲染为 foo/，或以 /index 结尾）
+        if (p.url === '/' || p.url === '/index' || p.url === '/index.html') return false
         if (p.url.endsWith('/')) return false
         if (p.url.endsWith('/index')) return false
-        // 去掉脚手架示例
-        if (excludeSet.has(p.url)) return false
+        if (p.url.endsWith('/index.html')) return false
+        if (/\/(api-examples|markdown-examples)(\.html?)?$/.test(p.url)) return false
         return true
       })
       .map((p) => {
-        const gitDate = getGitLastCommitISO(p.relativePath)
+        const rel = urlToRelativePath(p.url)
+        const gitDate = getGitLastCommitISO(rel)
         return {
           url: p.url,
           title:
             (p.frontmatter?.title as string) ||
             p.title ||
-            p.url.split('/').pop()?.replace(/\.md$/, '') ||
+            p.url.split('/').pop()?.replace(/\.html?$/, '').replace(/\.md$/, '') ||
             '',
           desc:
             ((p.frontmatter?.description as string) ||
               (p.frontmatter?.tagline as string) ||
               '').trim(),
-          // 直接是 ISO 8601 带时区字符串（如 2026-08-25T22:36:00+08:00），
-          // 也可能为空串（文件还没 commit 过）
+          excerpt: buildExcerptHtml(p), // 富文本 HTML，前端用 v-html 渲染
           gitDate,
           gitTs: gitDate ? +new Date(gitDate) : 0,
         }
       })
       .sort((a, b) => {
-        // git 时间倒序（新 → 旧）
         if (a.gitTs !== b.gitTs) return b.gitTs - a.gitTs
-        // 时间相同时按 url 字母序兜底（保证稳定排序）
         return a.url.localeCompare(b.url)
       })
       .slice(0, 3)
-      .map((p) => ({
-        title: p.title,
-        // 首页列表显示带时分秒的格式：YYYY-MM-DD HH:mm:ss
-        // 直接用 ISO 串截取前 19 位替换 T 为空格，可读性最好
-        date: formatDisplay(p.gitDate),
-        // 内部链接（VitePress 内部路由，由 index.md 的 toHref 拼上 BASE_URL）
-        link: p.url,
-        desc: p.desc,
-      }))
+      .map((p) => {
+        const tints = getCategoryTints(p.url)
+        return {
+          title: p.title,
+          date: formatDisplay(p.gitDate),
+          link: p.url,
+          desc: p.desc,
+          excerpt: p.excerpt,
+          cardBg: tints.bg,
+          cardBorder: tints.border,
+        }
+      })
   },
 })
+
+/**
+ * 根据文章 URL 前缀判断分类，返回对应「极淡 + 同色系边框」的微彩配色。
+ * 透明度都在 5%-7%，只是"略有区别"不突兀，不会影响正文阅读。
+ * 颜色语义：前端=蓝、后端=墨青(呼应品牌色)、中间件=青、数据库=橙、设计模式=紫、笔记=玫红。
+ * 兜底：柔和淡灰。全部使用 rgba → 在 VitePress 深/浅色模式下都会自然柔和叠加。
+ */
+function getCategoryTints(url: string): { bg: string; border: string } {
+  if (url.startsWith('/frontend/')) {
+    return { bg: 'rgba(59, 130, 246, 0.07)',  border: 'rgba(59, 130, 246, 0.18)' }
+  }
+  if (url.startsWith('/backend/')) {
+    return { bg: 'rgba(16, 185, 129, 0.07)', border: 'rgba(16, 185, 129, 0.18)' }
+  }
+  if (url.startsWith('/middleware/')) {
+    return { bg: 'rgba(6, 182, 212, 0.07)',  border: 'rgba(6, 182, 212, 0.18)' }
+  }
+  if (url.startsWith('/database/')) {
+    return { bg: 'rgba(249, 115, 22, 0.07)',  border: 'rgba(249, 115, 22, 0.18)' }
+  }
+  if (url.startsWith('/design-mode/')) {
+    return { bg: 'rgba(139, 92, 246, 0.07)', border: 'rgba(139, 92, 246, 0.18)' }
+  }
+  if (url.startsWith('/notes/')) {
+    return { bg: 'rgba(236, 72, 153, 0.07)', border: 'rgba(236, 72, 153, 0.18)' }
+  }
+  return { bg: 'rgba(100, 116, 139, 0.05)', border: 'rgba(100, 116, 139, 0.15)' }
+}
 
 /**
  * 把 ISO 8601 带时区字符串格式化为「YYYY-MM-DD HH:mm:ss」用于首页展示。
@@ -101,7 +171,6 @@ function formatDisplay(iso: string): string {
   if (!iso) return ''
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
-  // 用本地时区（用户在 cn.vuejs.org 看的也是本地时区），输出 YYYY-MM-DD HH:mm:ss
   const yyyy = d.getFullYear()
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   const dd = String(d.getDate()).padStart(2, '0')
