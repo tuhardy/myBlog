@@ -1,0 +1,149 @@
+/**
+ * 自定义主题样式
+ * 在这里集中管理博客主页的视觉调整：品牌色、Hero、分类卡片、文章列表等。
+ */
+
+/* ===== 品牌色：墨青系，区别于 VitePress 默认青色 ===== */
+:root {
+  --vp-c-brand-1: #2c7a7b;
+  --vp-c-brand-2: #285e61;
+  --vp-c-brand-3: #234e52;
+  --vp-c-brand: var(--vp-c-brand-1);
+
+  /* 按钮等使用品牌色的组件 */
+  --vp-button-brand-bg: var(--vp-c-brand-1);
+  --vp-button-brand-border: var(--vp-c-brand-1);
+  --vp-button-brand-hover-bg: var(--vp-c-brand-2);
+  --vp-button-brand-hover-border: var(--vp-c-brand-2);
+}
+
+/* ===== Hero：name 渐变文字 ===== */
+.VPHero .name {
+  background: linear-gradient(120deg, var(--vp-c-brand-1), var(--vp-c-brand-3));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ===== Hero 头像：圆形 + 品牌色描边 + 投影 + 轻微呼吸动画 ===== */
+.VPHero .image-container .VPImage {
+  border-radius: 50%;
+  width: 220px;
+  height: 220px;
+  object-fit: cover;
+  border: 4px solid var(--vp-c-brand-1);
+  box-shadow: 0 16px 40px rgba(44, 122, 123, .25);
+  animation: avatar-breathe 4s ease-in-out infinite;
+}
+@keyframes avatar-breathe {
+  0%, 100% { box-shadow: 0 16px 40px rgba(44, 122, 123, .25); }
+  50%      { box-shadow: 0 18px 52px rgba(44, 122, 123, .38); }
+}
+
+/* ===== 分类卡片：hover 上浮 + 边框高亮 ===== */
+.VPFeatures .VPFeature {
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+.VPFeatures .VPFeature:hover {
+  transform: translateY(-4px);
+  border-color: var(--vp-c-brand-1);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .08);
+}
+
+/* ===== 区块标题：左侧色条 ===== */
+.home-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2.5rem 0 1rem;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.home-section-title::before {
+  content: "";
+  width: 4px;
+  height: 1.1em;
+  background: var(--vp-c-brand-1);
+  border-radius: 2px;
+}
+
+/* ===== 最新文章列表：卡片化 + hover 左移 ===== */
+.post-list-wrap ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+.post-list-wrap li {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 10px;
+  margin: 0;
+  transition: border-color .2s ease, transform .2s ease, background .2s ease;
+}
+.post-list-wrap li:hover {
+  border-color: var(--vp-c-brand-1);
+  transform: translateX(4px);
+  background: var(--vp-c-bg-soft);
+}
+.post-list-wrap .date {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--vp-c-text-3);
+  font-size: .9em;
+}
+.post-list-wrap .desc {
+  margin-left: auto;
+  color: var(--vp-c-text-2);
+  font-size: .88em;
+}
+
+
+
+/* ===== Footer：左右对齐 + 紧凑样式 =====
+ * 默认 VPFooter 是上下堆叠（message 在上、copyright 在下）、
+ * 上下各 32px padding、内部 container max-width 1440px 很宽。
+ * 改造点：
+ *   1) .container 改成 flex 两端对齐 => 左 message / 右 copyright
+ *   2) 减小整体 padding（上下从 32px 改为 12px，左右从 24px 改为 48px 视觉居中收窄）
+ *   3) 字号从 16px 降到 13px
+ *   4) 顶边线变细一点，降低存在感
+ *
+ * 优先级说明：
+ *   VitePress 默认主题用 scoped 样式「.VPFooter[data-v-xxxx]」，
+ *   优先级 (0,2,0)；普通「body .VPFooter」也是 (0,2,0)，
+ *   由于默认 scoped 样式注入顺序靠后、会覆盖我们的，
+ *   所以这里 padding/font-size 加一层「.Layout > .VPFooter」父子组合
+ *   并用 !important 强制覆盖（范围极小，仅 2 个属性）。
+ */
+.Layout > .VPFooter {
+  padding: 20px 500px !important;
+  font-size: 13px !important;
+  border-top-color: var(--vp-c-divider-light);
+}
+.Layout > .VPFooter .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 100%;              /* 去掉默认 1440px 大留白 */
+  margin: 0;
+  padding: 0;
+}
+.Layout > .VPFooter .message,
+.Layout > .VPFooter .copyright {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  white-space: nowrap;
+  color: var(--vp-c-text-3);
+}
+/* 小屏下（<640px）换行变成上下两行，依然紧凑 */
+@media (max-width: 640px) {
+  .Layout > .VPFooter { padding: 10px 20px !important; font-size: 12px !important; }
+  .Layout > .VPFooter .container { flex-direction: column; align-items: flex-start; gap: 4px; }
+}
