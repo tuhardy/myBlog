@@ -70,12 +70,17 @@ const latest = computed(() => props.stats?.latestLabel ?? '—')
         </dl>
       </div>
 
-      <!-- 右栏：方形肖像 + 偏移线框 + 图注 -->
+      <!-- 右栏：拍立得相片风肖像 -->
       <figure class="mag-hero__figure">
-        <div class="mag-hero__portrait">
-          <img :src="avatarSrc" alt="博主头像" />
+        <div class="mag-hero__polaroid">
+          <div class="mag-hero__portrait">
+            <img :src="avatarSrc" alt="博主头像" />
+          </div>
+          <figcaption class="mag-hero__caption">
+            <span class="mag-hero__caption-main">博主与他的狗</span>
+            <span class="mag-hero__caption-sub mag-mono">FIG.01 · 2026</span>
+          </figcaption>
         </div>
-        <figcaption class="mag-mono">FIG.01 — 博主与他的狗</figcaption>
       </figure>
     </div>
   </section>
@@ -213,48 +218,76 @@ const latest = computed(() => props.stats?.latestLabel ?? '—')
   padding-top: 6px;
 }
 
-/* ===== 右栏肖像：方形裁切 + 偏移线框 + 图注 ===== */
+/* ===== 右栏肖像：拍立得相片风 =====
+ * 结构：figure > polaroid(白卡: 内边距 + 轻微旋转 + 投影)
+ *                > portrait(图片区: 1:1 裁切, 圆角)
+ *                > caption(底部手写体标题 + mono 编号)
+ * 白色相纸用真实背景色，避免暗色模式下"白边"刺眼；
+ * 投影用极柔和的多层阴影，hover 时相片回正 + 微抬。
+ */
 .mag-hero__figure {
-  position: relative;
   margin: 0;
+  perspective: 1200px;
+}
+.mag-hero__polaroid {
+  position: relative;
+  background: var(--vp-c-bg-soft);
+  padding: 14px 14px 56px;
+  border-radius: 6px;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    0 12px 32px rgba(44, 62, 80, 0.12);
+  transform: rotate(-2deg);
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.5s ease;
+}
+.mag-hero__polaroid:hover {
+  transform: rotate(0deg) translateY(-4px);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.08),
+    0 20px 48px rgba(44, 62, 80, 0.18);
 }
 .mag-hero__portrait {
   position: relative;
   aspect-ratio: 1 / 1;
-  border-radius: 24px;
+  border-radius: 3px;
   overflow: hidden;
-  border: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg-soft);
+  background: var(--vp-c-bg-mute, #ddd);
 }
 .mag-hero__portrait img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center top;
   display: block;
   transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.mag-hero__portrait:hover img {
-  transform: scale(1.05);
+.mag-hero__polaroid:hover .mag-hero__portrait img {
+  transform: scale(1.04);
 }
-/* 偏移线框：杂志排版常用的第二层边框装饰 */
-.mag-hero__figure::before {
-  content: '';
+/* 底部手写体签名：用 cursive 字体栈，模拟拍立得相纸底部的笔迹 */
+.mag-hero__caption {
   position: absolute;
-  z-index: -1;
-  inset: -14px 14px 14px -14px;
-  border: 1px solid var(--vp-c-brand-1);
-  border-radius: 24px;
-  opacity: 0.4;
-  transition: inset 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  left: 0;
+  right: 0;
+  bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
-.mag-hero__figure:hover::before {
-  inset: -20px 20px 20px -20px;
+.mag-hero__caption-main {
+  font-family: 'Segoe Script', 'Brush Script MT', 'Comic Sans MS', cursive;
+  font-size: 18px;
+  line-height: 1.1;
+  color: var(--vp-c-text-2);
+  transform: rotate(-1.5deg);
 }
-.mag-hero__figure figcaption {
-  margin-top: 22px;
-  text-align: center;
-  font-size: 11px;
+.mag-hero__caption-sub {
+  font-size: 9px;
+  letter-spacing: 0.2em;
   color: var(--vp-c-text-3);
+  opacity: 0.7;
 }
 
 /* ===== 响应式：<960px 单栏，肖像置底缩小 ===== */
