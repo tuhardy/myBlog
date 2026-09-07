@@ -82,6 +82,31 @@ function buildExcerptHtml(p: { frontmatter?: any; excerpt?: unknown }): string {
   return ''
 }
 
+/**
+ * 首页卡片摘要：纯文本（不再把富文本 HTML 塞进卡片）。
+ * 富文本摘要在卡片里会重复文章标题、混入 <hr>/表格/代码块，视觉噪音大；
+ * 首页卡片采用「纯文本 + CSS 三行截断」是 Medium / 掘金 / 知乎一致的做法，
+ * 干净、可预测、绝不撑破布局。
+ * 处理顺序：优先 Frontmatter.description（一句话简介）→ 否则 strip 摘要 HTML。
+ */
+function buildPlainExcerpt(html: string, desc = ''): string {
+  const fromDesc = desc.trim()
+  if (fromDesc) return fromDesc
+  if (!html) return ''
+  const text = html
+    .replace(/<style[\s\S]*?<\/style>/g, ' ')
+    .replace(/<[^>]+>/g, ' ')           // 去掉所有 HTML 标签
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')              // 折叠所有空白（含换行）
+    .trim()
+  return text.slice(0, 160)
+}
+
 export default createContentLoader('**/*.md', {
   includeSource: true,  // 保留，后续如果需要自定义处理正文兜底可用
   excerpt: true,        // 开启 excerpt 机制：解析 Frontmatter.excerpt + <!-- more -->
@@ -121,46 +146,28 @@ export default createContentLoader('**/*.md', {
       })
       .slice(0, 3)
       .map((p) => {
-        const tints = getCategoryTints(p.url)
         return {
           title: p.title,
           date: formatDisplay(p.gitDate),
           link: p.url,
-          desc: p.desc,
-          excerpt: p.excerpt,
-          cardBg: tints.bg,
-          cardBorder: tints.border,
+          category: getCategoryName(p.url),
+          excerpt: buildPlainExcerpt(p.excerpt, p.desc),
         }
       })
   },
 })
 
 /**
- * 根据文章 URL 前缀判断分类，返回对应「极淡 + 同色系边框」的微彩配色。
- * 透明度都在 5%-7%，只是"略有区别"不突兀，不会影响正文阅读。
- * 颜色语义：前端=蓝、后端=墨青(呼应品牌色)、中间件=青、数据库=橙、设计模式=紫、笔记=玫红。
- * 兜底：柔和淡灰。全部使用 rgba → 在 VitePress 深/浅色模式下都会自然柔和叠加。
+ * 根据文章 URL 前缀判断中文分类名（杂志风统一单色，不再返回彩色徽标）。
  */
-function getCategoryTints(url: string): { bg: string; border: string } {
-  if (url.startsWith('/frontend/')) {
-    return { bg: 'rgba(59, 130, 246, 0.07)',  border: 'rgba(59, 130, 246, 0.18)' }
-  }
-  if (url.startsWith('/backend/')) {
-    return { bg: 'rgba(16, 185, 129, 0.07)', border: 'rgba(16, 185, 129, 0.18)' }
-  }
-  if (url.startsWith('/middleware/')) {
-    return { bg: 'rgba(6, 182, 212, 0.07)',  border: 'rgba(6, 182, 212, 0.18)' }
-  }
-  if (url.startsWith('/database/')) {
-    return { bg: 'rgba(249, 115, 22, 0.07)',  border: 'rgba(249, 115, 22, 0.18)' }
-  }
-  if (url.startsWith('/design-mode/')) {
-    return { bg: 'rgba(139, 92, 246, 0.07)', border: 'rgba(139, 92, 246, 0.18)' }
-  }
-  if (url.startsWith('/notes/')) {
-    return { bg: 'rgba(236, 72, 153, 0.07)', border: 'rgba(236, 72, 153, 0.18)' }
-  }
-  return { bg: 'rgba(100, 116, 139, 0.05)', border: 'rgba(100, 116, 139, 0.15)' }
+function getCategoryName(url: string): string {
+  if (url.startsWith('/frontend/')) return '前端'
+  if (url.startsWith('/backend/')) return '后端'
+  if (url.startsWith('/middleware/')) return '中间件'
+  if (url.startsWith('/database/')) return '数据库'
+  if (url.startsWith('/design-mode/')) return '设计模式'
+  if (url.startsWith('/notes/')) return '笔记'
+  return '随笔'
 }
 
 /**

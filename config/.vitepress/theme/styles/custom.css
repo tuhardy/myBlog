@@ -1,319 +1,217 @@
 /**
- * 自定义主题样式
- * 在这里集中管理博客主页的视觉调整：品牌色、Hero、分类卡片、文章列表等。
+ * 自定义主题样式 — 墨蓝石板色系 · 杂志编辑风
+ * 分层：品牌变量 → mono 工具类 → 全局画布 → 文章卡片 → 导航栏 → Footer → 层级 → 暗色模式
  */
 
-/* ===== 品牌色：墨青系，区别于 VitePress 默认青色 ===== */
+/* ===== 品牌色：墨蓝石板 #2C3E50 单色系（浅色模式） ===== */
 :root {
-  --vp-c-brand-1: #2c7a7b;
-  --vp-c-brand-2: #285e61;
-  --vp-c-brand-3: #234e52;
+  --vp-c-brand-1: #2c3e50;
+  --vp-c-brand-2: #34495e;
+  --vp-c-brand-3: #1f2d3a;
   --vp-c-brand: var(--vp-c-brand-1);
 
-  /* 按钮等使用品牌色的组件 */
   --vp-button-brand-bg: var(--vp-c-brand-1);
   --vp-button-brand-border: var(--vp-c-brand-1);
-  --vp-button-brand-hover-bg: var(--vp-c-brand-2);
-  --vp-button-brand-hover-border: var(--vp-c-brand-2);
+  --vp-button-brand-hover-bg: var(--vp-c-brand-3);
+  --vp-button-brand-hover-border: var(--vp-c-brand-3);
+
+  /* 全局页面背景：冷灰画布（搭配墨蓝的冷调） */
+  --vp-c-bg:       rgb(238, 242, 246);
+  --vp-c-bg-soft:  rgb(232, 237, 242);
+  --vp-c-bg-alt:   rgb(238, 242, 246);
 }
 
-/* ===== Hero：name 渐变文字 ===== */
-.VPHero .name {
-  background: linear-gradient(120deg, var(--vp-c-brand-1), var(--vp-c-brand-3));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+/* ===== 暗色模式：品牌色提亮为雾蓝石板，画布柔和深灰（绝不用纯黑） ===== */
+html.dark {
+  --vp-c-brand-1: #8fa8c8;
+  --vp-c-brand-2: #a8bdd6;
+  --vp-c-brand-3: #c3d2e4;
+
+  --vp-button-brand-bg: #3d556e;
+  --vp-button-brand-hover-bg: #4a6885;
+
+  --vp-c-bg:      #1a1b1e;
+  --vp-c-bg-soft: #212328;
+  --vp-c-bg-alt:  #1a1b1e;
 }
 
-/* ===== Hero 头像：圆形 + 品牌色描边 + 投影 + 轻微呼吸动画 ===== */
-.VPHero .image-container .VPImage {
-  border-radius: 50%;
-  width: 220px;
-  height: 220px;
-  object-fit: cover;
-  border: 4px solid var(--vp-c-brand-1);
-  box-shadow: 0 16px 40px rgba(44, 122, 123, .25);
-  animation: avatar-breathe 4s ease-in-out infinite;
-}
-@keyframes avatar-breathe {
-  0%, 100% { box-shadow: 0 16px 40px rgba(44, 122, 123, .25); }
-  50%      { box-shadow: 0 18px 52px rgba(44, 122, 123, .38); }
+/* ===== mono 等宽工具类：杂志风的编号 / 日期 / 页脚标签 ===== */
+.mag-mono {
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas,
+    'Liberation Mono', monospace;
 }
 
-/* ===== 分类卡片：hover 上浮 + 边框高亮 ===== */
-.VPFeatures .VPFeature {
-  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
-}
-.VPFeatures .VPFeature:hover {
-  transform: translateY(-4px);
-  border-color: var(--vp-c-brand-1);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, .08);
+/* 锚点平滑滚动（Banner 按钮跳转到画廊 / 文章区） */
+html {
+  scroll-behavior: smooth;
 }
 
-/* ===== 区块标题：左侧色条 ===== */
-.home-section-title {
+/* ===== 首页文章区标题（全站编号 03）：mono 前缀 + 中文标题 + 延展 hairline ===== */
+.post-list-wrap {
+  max-width: 1152px;
+  margin: 0 auto;
+  padding: 8px 24px 96px;
+  scroll-margin-top: 80px;
+}
+.post-list-wrap > h2 {
+  border-top: 0 !important;
+  padding-top: 0 !important;
+  margin: 0 0 32px !important;
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 2.5rem 0 1rem;
-  font-size: 1.4rem;
-  font-weight: 700;
+  gap: 20px;
 }
-.home-section-title::before {
+.post-list-wrap > h2::before {
+  content: "03 — LATEST POSTS";
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  color: var(--vp-c-brand-1);
+  white-space: nowrap;
+}
+.post-list-wrap > h2::after {
   content: "";
-  width: 4px;
-  height: 1.1em;
-  background: var(--vp-c-brand-1);
-  border-radius: 2px;
+  flex: 1;
+  height: 1px;
+  background: var(--vp-c-divider);
+}
+.home-section-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: var(--vp-c-text-1);
 }
 
-/* ===== 最新文章列表：大卡片 + hover 左移 + 富文本摘要（保留原文布局） ===== */
+/* ===== 最新文章：杂志纸感卡片 =====
+ * 结构：post-no（序号水印）→ post-meta（#分类 + 日期）
+ *      → post-title（大标题）→ post-excerpt（两行纯文本）→ post-foot（hairline + 阅读链接）
+ */
 .post-list-wrap ul {
   list-style: none;
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 16px; /* 卡片间距加大，更透气 */
+  gap: 20px;
 }
-/* ===== 全局页面背景：用户指定浅灰 rgb(238,242,246) = #EEF2F6 =====
- * VitePress 默认页面底层有多层级 bg 变量控制（主容器 / VPDoc / VPHome / 侧边栏 / 导航栏浮层），
- * 为了让整个首页（Hero / features / 最新文章三段）都落到同一张浅灰画布上，
- * 需要同时 override --vp-c-bg（主页面背景）与 --vp-c-bg-soft（软背景色，部分容器会用）。
- * 优先级上用 :root 直接重定义即可。
- */
-:root {
-  --vp-c-bg:       rgb(246, 248, 250);  /* 全局浅灰画布，主容器背景 */
-  --vp-c-bg-soft:  rgb(232, 237, 242);  /* 软底色比画布再深一点点，部分浮层 hover 需要的温和色差 */
-  --vp-c-bg-alt:   rgb(246, 248, 250);  /* alt 背景（VPHome/VPFeature 里偶有覆盖）也统一 */
-}
-
 .post-list-wrap li {
-  position: relative; /* 为右下角「继续阅读 →」按钮提供定位锚点 */
-  display: block;
-  padding: 22px 26px 44px; /* 底部多留 18px 空间放「继续阅读 →」按钮 */
-  /* ★ 方案 A''：浅灰画布上的纯白悬浮卡片（Medium / Dribbble 经典风，与页面底天然有层级差）★ */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 26px 32px 0;
   background: #ffffff;
-  border: 1px solid transparent; /* hover 时浮现墨青边，默认不抢占视线 */
-  border-radius: 14px;
-  margin: 0;
-  /* 投影：因为画布是浅灰，纯白卡对比度好 → 不需要极淡勾边层，直接用两层中等力度柔投影足够 */
-  box-shadow:
-    0 2px 6px rgba(15, 23, 42, 0.04),
-    0 12px 32px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(15, 23, 42, 0.09);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
   transition:
-    border-color .2s ease,
-    transform .25s cubic-bezier(.2,.8,.2,1),  /* 上浮使用带弹性的缓动，更顺滑 */
-    box-shadow .3s ease,
-    background-color .2s ease;
+    border-color 0.25s ease,
+    transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.3s ease;
 }
 .post-list-wrap li:hover {
-  /* ★ 方案 A'' hover：上抬 3px + 1px 墨青边 + 投影加强 + 品牌墨青光晕 ★ */
   border-color: var(--vp-c-brand-1);
   transform: translateY(-3px);
-  background-color: #ffffff;   /* hover 依旧保持纯白，不切 bg-soft 以免变脏 */
-  box-shadow:
-    0 6px 16px rgba(15, 23, 42, 0.07),
-    0 20px 44px rgba(44, 122, 123, 0.12);   /* 浅灰画布上浮白卡 + 墨青光晕，视觉更"浮得起" */
+  box-shadow: 0 14px 36px rgba(44, 62, 80, 0.13);
 }
-/* 第一行：日期 / 标题 / 描述 */
-.post-list-wrap .main-row {
+
+/* 大号序号水印（右上） */
+.post-list-wrap .post-no {
+  position: absolute;
+  top: 14px;
+  right: 26px;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--vp-c-brand-1);
+  opacity: 0.1;
+  font-variant-numeric: tabular-nums;
+  transition: opacity 0.3s ease;
+}
+.post-list-wrap li:hover .post-no {
+  opacity: 0.22;
+}
+
+/* meta 行：#分类 + 日期，mono 小字 */
+.post-list-wrap .post-meta {
   display: flex;
   align-items: baseline;
   gap: 16px;
 }
-.post-list-wrap .date {
-  flex: 0 0 auto;
-  font-variant-numeric: tabular-nums;
+.post-list-wrap .post-tag,
+.post-list-wrap .post-date {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+.post-list-wrap .post-tag {
+  font-weight: 700;
+  color: var(--vp-c-brand-1);
+}
+.post-list-wrap .post-date {
   color: var(--vp-c-text-3);
-  font-size: .9em;
+  font-variant-numeric: tabular-nums;
 }
-.post-list-wrap .desc {
-  margin-left: auto;
-  color: var(--vp-c-text-2);
-  font-size: .88em;
-  white-space: nowrap;
+
+/* 标题：独占一行，层级最高 */
+.post-list-wrap .post-title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--vp-c-text-1);
+  text-decoration: none;
+  transition: color 0.2s ease;
 }
-/* ===== 第二行：富文本摘要（保留原文 Markdown 布局）+ 渐隐遮罩（A 层） ===== */
-.post-list-wrap .excerpt {
-  margin: 12px 0 0 0;
-  font-size: .85em;
-  line-height: 1.65;
+.post-list-wrap li:hover .post-title {
+  color: var(--vp-c-brand-1);
+}
+
+/* 摘要：纯文本两行截断 */
+.post-list-wrap .post-excerpt {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.8;
   color: var(--vp-c-text-2);
-  max-height: 180px;         /* 展示约 3 段文字 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
-  padding-bottom: 26px;      /* 底部留白，让渐隐遮罩覆盖的是空白而不是文字本身 */
-  /* ★ A 层核心：从 82% 处开始柔和渐隐至透明 → 彻底消除"硬切半截字" */
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 82%, rgba(0,0,0,0) 100%);
-          mask-image: linear-gradient(to bottom, #000 0%, #000 82%, rgba(0,0,0,0) 100%);
-  -webkit-mask-repeat: no-repeat;
-          mask-repeat: no-repeat;
-}
-/* 标题：在小卡片里要降级，不能比主标题还大 */
-.post-list-wrap .excerpt h1,
-.post-list-wrap .excerpt h2,
-.post-list-wrap .excerpt h3 {
-  font-size: .96em;
-  font-weight: 600;
-  margin: .5em 0 .2em;
-  color: var(--vp-c-text-1);
-}
-.post-list-wrap .excerpt h4,
-.post-list-wrap .excerpt h5,
-.post-list-wrap .excerpt h6 {
-  font-size: .88em;
-  font-weight: 600;
-  margin: .4em 0 .15em;
-  color: var(--vp-c-text-1);
-}
-.post-list-wrap .excerpt p {
-  margin: .25em 0;
-}
-.post-list-wrap .excerpt a {
-  color: var(--vp-c-brand-1);
-  text-decoration: none;
-}
-.post-list-wrap .excerpt a:hover {
-  text-decoration: underline;
-}
-/* 行内代码 & 代码块：缩小，避免把卡片撑爆 */
-.post-list-wrap .excerpt :not(pre) > code {
-  font-size: .85em;
-  padding: 1px 5px;
-  background: var(--vp-c-bg-soft);
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 4px;
-  color: var(--vp-c-brand-1);
-}
-.post-list-wrap .excerpt pre {
-  font-size: .72em;
-  max-height: 64px;           /* 代码块最多 3 行可见，其余裁切 */
-  overflow: hidden;
-  margin: .4em 0;
-  padding: 8px 10px !important;
-  border-radius: 6px;
-  line-height: 1.45;
-}
-.post-list-wrap .excerpt pre code {
-  background: transparent !important;
-  border: none !important;
-  padding: 0 !important;
-}
-/* 图片：限制最大高度，避免大图撑破卡片 */
-.post-list-wrap .excerpt img {
-  max-height: 60px;
-  width: auto;
-  border-radius: 6px;
-  margin: .3em 0;
-  display: inline-block;
-}
-/* 列表：保留项目符号 + 缩进 */
-.post-list-wrap .excerpt ul,
-.post-list-wrap .excerpt ol {
-  margin: .35em 0;
-  padding-left: 1.4em;
-}
-/* ★ 关键：摘要里的 li 不能继承外层卡片的 border / padding / hover 动画，否则会变成"卡片里套小卡片" ★ */
-.post-list-wrap .excerpt li {
-  display: list-item;
-  border: none !important;
-  padding: 2px 0 !important;
-  margin: 0;
-  border-radius: 0;
-  transform: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  font-size: 1em;
-  line-height: 1.55;
-}
-.post-list-wrap .excerpt li:hover {
-  transform: none !important;
-  background: transparent !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-}
-/* 引用块：左侧竖线装饰 */
-.post-list-wrap .excerpt blockquote {
-  margin: .4em 0;
-  padding: 2px 0 2px 10px;
-  border-left: 3px solid var(--vp-c-brand-1);
-  color: var(--vp-c-text-3);
-  font-size: .9em;
-  background: transparent;
-}
-/* 表格：缩小并居中 */
-.post-list-wrap .excerpt table {
-  font-size: .78em;
-  border-collapse: collapse;
-  margin: .4em 0;
-  max-width: 100%;
-  display: block;
-  overflow: hidden;
-}
-.post-list-wrap .excerpt th,
-.post-list-wrap .excerpt td {
-  border: 1px solid var(--vp-c-divider);
-  padding: 3px 6px;
-}
-/* 分隔线 */
-.post-list-wrap .excerpt hr {
-  border: none;
-  border-top: 1px solid var(--vp-c-divider);
-  margin: .5em 0;
 }
 
-/* ===== C 层：右下角「继续阅读 →」引导按钮 ===== */
+/* 卡脚：hairline 分隔 + 右对齐阅读链接 */
+.post-list-wrap .post-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+  padding: 13px 0;
+  border-top: 1px solid rgba(15, 23, 42, 0.07);
+}
 .post-list-wrap .read-more {
-  position: absolute;
-  right: 24px;
-  bottom: 14px;
-  font-size: .8em;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   color: var(--vp-c-brand-1);
-  opacity: .75;        /* 默认稍微淡一点，不抢正文视线 */
   text-decoration: none;
-  z-index: 3;          /* 浮在 mask 渐隐遮罩层之上 */
-  transition: opacity .2s ease, transform .2s ease, text-shadow .2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
-/* hover 卡片时按钮高亮 + 轻微右移，呼应「继续阅读」的箭头动效 */
 .post-list-wrap li:hover .read-more {
-  opacity: 1;
-  transform: translateX(3px);
-  text-decoration: underline;
-  text-shadow: 0 0 8px rgba(16, 185, 129, .15);
+  transform: translateX(4px);
 }
 
-/* ===== 导航栏：下边缘阴影线 =====
- * 导航栏 sticky 固定在顶部，且其背景与页面画布同为浅灰 rgb(238,242,246)，
- * 同色相接会让导航栏与下方内容「粘」在一起，缺少层级边界。
- * 这里给 .VPNavBar 下边缘加一条柔和阴影线：
- *   1) 紧贴底边的 1px 细线 → 提供明确的视觉分隔；
- *   2) 向下渐隐的柔投影 → 制造悬浮层级感，但不抢品牌色风头。
- * 阴影色用 slate 系（rgba(15,23,42)）与卡片投影保持一致，整体协调。
- */
+/* ===== 导航栏：下边缘渐进阴影线（--nav-p 由 theme/index.ts 滚动写入） ===== */
 .VPNavBar {
+  --nav-p: 1;  /* fallback：JS 未启用时保留满阴影 */
   box-shadow:
-    0 1px 0 rgba(15, 23, 42, 0.06),
-    0 6px 16px -6px rgba(15, 23, 42, 0.08);
+    0 1px 0 rgba(15, 23, 42, calc(0.06 * var(--nav-p))),
+    0 6px 16px -6px rgba(15, 23, 42, calc(0.08 * var(--nav-p)));
 }
 
-/* ===== Footer：左右对齐 + 紧凑样式 =====
- * 默认 VPFooter 是上下堆叠（message 在上、copyright 在下）、
- * 上下各 32px padding、内部 container max-width 1440px 很宽。
- * 改造点：
- *   1) .container 改成 flex 两端对齐 => 左 message / 右 copyright
- *   2) 减小整体 padding（上下从 32px 改为 12px，左右从 24px 改为 48px 视觉居中收窄）
- *   3) 字号从 16px 降到 13px
- *   4) 顶边线变细一点，降低存在感
- *
- * 优先级说明：
- *   VitePress 默认主题用 scoped 样式「.VPFooter[data-v-xxxx]」，
- *   优先级 (0,2,0)；普通「body .VPFooter」也是 (0,2,0)，
- *   由于默认 scoped 样式注入顺序靠后、会覆盖我们的，
- *   所以这里 padding/font-size 加一层「.Layout > .VPFooter」父子组合
- *   并用 !important 强制覆盖（范围极小，仅 2 个属性）。
- */
+/* ===== Footer：左右对齐 + 紧凑 + 响应式（固定侧内边距，杜绝横向溢出） ===== */
 .Layout > .VPFooter {
-  padding: 20px 500px !important;
+  padding: 18px 24px !important;
   font-size: 13px !important;
   border-top-color: var(--vp-c-divider-light);
 }
@@ -322,8 +220,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  max-width: 100%;              /* 去掉默认 1440px 大留白 */
-  margin: 0;
+  max-width: 1152px;
+  margin: 0 auto;
   padding: 0;
 }
 .Layout > .VPFooter .message,
@@ -334,8 +232,33 @@
   white-space: nowrap;
   color: var(--vp-c-text-3);
 }
-/* 小屏下（<640px）换行变成上下两行，依然紧凑 */
 @media (max-width: 640px) {
   .Layout > .VPFooter { padding: 10px 20px !important; font-size: 12px !important; }
   .Layout > .VPFooter .container { flex-direction: column; align-items: flex-start; gap: 4px; }
+}
+
+/* ===== 呼吸粒子背景层：内容层级抬升（fixed z-index:0 光斑之上） ===== */
+.VPContent {
+  position: relative;
+  z-index: 1;
+}
+.Layout > .VPFooter {
+  position: relative;
+  z-index: 1;
+}
+
+/* ===== 暗色模式：文章卡为深纸卡 ===== */
+html.dark .post-list-wrap li {
+  background: rgba(38, 40, 46, 0.72);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+html.dark .post-list-wrap li:hover {
+  border-color: var(--vp-c-brand-1);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.4);
+}
+html.dark .post-list-wrap .post-foot {
+  border-top-color: rgba(255, 255, 255, 0.08);
 }
