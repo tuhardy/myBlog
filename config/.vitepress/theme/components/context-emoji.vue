@@ -27,14 +27,20 @@ const RULES: EmojiRule[] = [
   { re: /auth|鉴权|会话|登录|session/, emoji: '🔐', label: '鉴权' },
   { re: /database|数据库|mysql|redis|\bsql\b/, emoji: '🗄️', label: '数据库' },
   { re: /frontend|前端|\bvue\b|\bcss\b|工程化|tooling/, emoji: '🎨', label: '前端' },
-  { re: /backend|后端|node\.?js|restful|\bapi\b/, emoji: '🧩', label: '后端' },
+  // 去掉 \bapi\b：会误命中 /api-examples 演示页（api- 与标题中的独立 api 单词）
+  { re: /backend|后端|node\.?js|restful/, emoji: '🧩', label: '后端' },
   { re: /design|设计模式|架构|singleton|factory|observer/, emoji: '🏛️', label: '设计模式' },
   { re: /note|笔记|markdown|教程/, emoji: '📓', label: '笔记' },
   { re: /deploy|部署|docker/, emoji: '📦', label: '部署' },
 ]
 
+/** 脚手架示例页 / 非内容页不展示情境 emoji（演示页无法匹配真实分类） */
+const IGNORE = /\/(api-examples|markdown-examples)(\.html?)?$/
+
 const route = useRoute()
 const { page } = useData()
+
+const show = computed(() => !IGNORE.test(route.path))
 
 const current = computed<EmojiRule>(() => {
   const haystack = `${route.path} ${page.value.title ?? ''}`.toLowerCase()
@@ -43,7 +49,7 @@ const current = computed<EmojiRule>(() => {
 </script>
 
 <template>
-  <div class="context-emoji" aria-hidden="true">
+  <div v-if="show" class="context-emoji" aria-hidden="true">
     <div class="context-emoji__stage">
       <span class="context-emoji__icon">{{ current.emoji }}</span>
     </div>
@@ -74,7 +80,7 @@ const current = computed<EmojiRule>(() => {
   line-height: 1;
   padding: 14px;
   border-radius: 22px;
-  /* 玻璃小徽章：与特性画廊同一套玻璃语言 */
+  /* 玻璃小徽章（装饰用，与内容区卡片语言独立） */
   background: rgba(255, 255, 255, 0.6);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);

@@ -18,6 +18,8 @@ const barRef = ref<HTMLElement | null>(null)
 let raf = 0
 let ticking = false
 let finished = false
+let reducedMq: MediaQueryList | null = null
+let widthMq: MediaQueryList | null = null
 
 function update() {
   ticking = false
@@ -55,17 +57,41 @@ function onScroll() {
   }
 }
 
-onMounted(() => {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+/** 与 glow-particle 对齐：JS 层也做 768px / reduced-motion 门控，避免移动端空转 */
+function isDisabled(): boolean {
+  return !!reducedMq?.matches || !!widthMq?.matches
+}
+
+function start() {
+  if (isDisabled()) return
   window.addEventListener('scroll', onScroll, { passive: true })
   window.addEventListener('resize', onScroll, { passive: true })
   update()
-})
+}
 
-onBeforeUnmount(() => {
+function stop() {
   if (raf) cancelAnimationFrame(raf)
   window.removeEventListener('scroll', onScroll)
   window.removeEventListener('resize', onScroll)
+}
+
+function onMqChange() {
+  if (isDisabled()) stop()
+  else start()
+}
+
+onMounted(() => {
+  reducedMq = window.matchMedia('(prefers-reduced-motion: reduce)')
+  widthMq = window.matchMedia('(max-width: 768px)')
+  reducedMq.addEventListener('change', onMqChange)
+  widthMq.addEventListener('change', onMqChange)
+  start()
+})
+
+onBeforeUnmount(() => {
+  reducedMq?.removeEventListener('change', onMqChange)
+  widthMq?.removeEventListener('change', onMqChange)
+  stop()
 })
 </script>
 

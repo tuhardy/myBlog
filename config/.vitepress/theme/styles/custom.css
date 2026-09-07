@@ -46,11 +46,15 @@ html {
   scroll-behavior: smooth;
 }
 
-/* ===== 首页文章区标题（全站编号 03）：mono 前缀 + 中文标题 + 延展 hairline ===== */
+/* ===== 首页文章区标题：mono 编号 + 中文标题 + 延展 hairline =====
+ * 编号 03 直接写在 index.md 的 markup 中（与 01/02 集中维护），
+ * 这里只负责去掉 .vp-doc h2 默认 border-top，并排版三段式标题。
+ * 区块不再自带 max-width / 水平 padding，直接吃外层 .vp-doc.container 槽宽，
+ * 避免容器嵌套导致的 gutter 双层叠加。
+ */
 .post-list-wrap {
-  max-width: 1152px;
   margin: 0 auto;
-  padding: 8px 24px 96px;
+  padding: 8px 0 96px;
   scroll-margin-top: 80px;
 }
 .post-list-wrap > h2 {
@@ -61,20 +65,18 @@ html {
   align-items: center;
   gap: 20px;
 }
-.post-list-wrap > h2::before {
-  content: "03 — LATEST POSTS";
-  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.28em;
-  color: var(--vp-c-brand-1);
-  white-space: nowrap;
-}
 .post-list-wrap > h2::after {
   content: "";
   flex: 1;
   height: 1px;
   background: var(--vp-c-divider);
+}
+.post-list__num {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  color: var(--vp-c-brand-1);
+  white-space: nowrap;
 }
 .home-section-title {
   font-size: 28px;

@@ -23,7 +23,7 @@ const toHref = (path) => BASE + String(path || '').replace(/^\//, '')
 <!-- 03 最新文章 -->
 <div id="latest" class="post-list-wrap">
 
-## <span class="home-section-title">最新文章</span>
+## <span class="mag-mono post-list__num">03 — LATEST POSTS</span><span class="home-section-title">最新文章</span>
 
 <ul class="post-list">
   <li v-for="(p, i) in latestPosts" :key="p.link">

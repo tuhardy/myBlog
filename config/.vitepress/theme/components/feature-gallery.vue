@@ -69,9 +69,8 @@ const features: GalleryFeature[] = [
 
 <style scoped>
 .feature-gallery {
-  max-width: 1152px;
   margin: 0 auto;
-  padding: 16px 24px 88px;
+  padding: 16px 0 88px;
   scroll-margin-top: 80px;
 }
 

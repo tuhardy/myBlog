@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
- * magazine-hero.vue — 杂志编辑风首页 Banner
+ * magazine-hero.vue — 杂志编辑风首页 Banner（首页区块 01）
  *
- * 通过 Layout 的 #home-hero-before 插槽注入（取代默认居中头像 Hero）。
+ * 在 docs/index.md 中直接引入并渲染（首页组合由 Markdown 编排）。
  * 设计语言：
  *  - 刊头（masthead）：mono 小字 + 上下 hairline，像期刊的版权页；
  *  - 不对称两栏：左侧超大标题（实心 + 描边空心混排，杂志签名手法）、
@@ -83,9 +83,8 @@ const latest = computed(() => props.stats?.latestLabel ?? '—')
 
 <style scoped>
 .mag-hero {
-  max-width: 1152px;
   margin: 0 auto;
-  padding: 40px 24px 48px;
+  padding: 40px 0 48px;
 }
 
 /* ===== 刊头：上下 hairline 包夹的 mono 信息行 ===== */
