@@ -49,6 +49,7 @@ export default defineConfig({
           items: [
             { text: '总览与运行边界', link: '/algorithm/' },
             { text: '两数之和：从双循环到哈希表', link: '/algorithm/two-sum' },
+            { text: '二分查找：让搜索区间持续减半', link: '/algorithm/binary-search' },
           ],
         },
       ],

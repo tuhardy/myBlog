@@ -8,6 +8,7 @@ import { setTimeout as delay } from 'node:timers/promises'
 const DEFAULT_BASE = 'http://127.0.0.1:4173/myBlog/'
 const DEFAULT_SECTION = 'linux'
 const WAIT_MS = 15000
+const MAX_DIAGNOSTIC_LENGTH = 240
 const POLL_MS = 100
 const ANIMATION_MS = 750
 const DESKTOP_WIDTH = 1280
@@ -18,6 +19,19 @@ const MAX_CODE_LENGTH = 32 * 1024
 const RUN_TIMEOUT_MS = 3000
 const LARGE_OUTPUT_LENGTH = 40000
 const CASE_IDS = ['ordinary', 'later', 'duplicate', 'negative', 'zero']
+const PUZZLE_CHECKS = {
+  'two-sum': {
+    id: 'two-sum', entryPoint: 'twoSum', caseIds: CASE_IDS,
+    expected: [[0, 1], [1, 2], [0, 1], [0, 2], [0, 3]],
+  },
+  'binary-search': {
+    id: 'binary-search', entryPoint: 'binarySearch',
+    caseIds: ['middle', 'first', 'last', 'missing', 'empty', 'single-found', 'single-missing'],
+    expected: [4, 0, 4, -1, -1, 0, -1],
+  },
+}
+const BINARY_SOLUTION = 'function binarySearch(nums, target) { return nums.indexOf(target) }'
+let currentPuzzle
 const SANDBOX = '[data-testid="sandbox"]'
 const EDITOR = '[data-testid="sandbox-editor"] .cm-content[contenteditable="true"]'
 const STATUS = '[data-testid="sandbox-status"]'
@@ -55,7 +69,7 @@ function command(method, params = {}, session = sessionId) {
     const id = ++serial
     const timeout = setTimeout(() => {
       pending.delete(id)
-      reject(new Error(`CDP timeout: ${method}`))
+      reject(new Error(`CDP timeout: ${method}; browser exit: ${browser.exitCode}; expression: ${String(params.expression || '').slice(0, MAX_DIAGNOSTIC_LENGTH)}`))
     }, WAIT_MS)
     pending.set(id, { resolve, reject, timeout })
     socket.send(JSON.stringify({ id, method, params, ...(session ? { sessionId: session } : {}) }))
@@ -123,6 +137,10 @@ async function key(key, code, windowsVirtualKeyCode, modifiers = 0) {
   await command('Input.dispatchKeyEvent', { type: 'keyUp', key, code, windowsVirtualKeyCode, modifiers })
 }
 
+async function editorSource() {
+  return evaluate(`Array.from(document.querySelectorAll('[data-testid="sandbox-editor"] .cm-line'), node => node.textContent).join('\\n')`)
+}
+
 async function editSource(source) {
   await waitFor(`!!document.querySelector(${JSON.stringify(EDITOR)})`)
   await evaluate(`document.querySelector(${JSON.stringify(EDITOR)}).focus()`)
@@ -141,22 +159,28 @@ async function button(action) {
 }
 
 async function sandboxState() {
-  return evaluate(`({ status: document.querySelector('${STATUS}')?.dataset.status, cases: Array.from(document.querySelectorAll('${CASES}'), node => ({ id: node.dataset.caseId, status: node.dataset.status })), error: document.querySelector('[data-testid="sandbox-error"]')?.textContent.trim() || '', duration: document.querySelector('[data-testid="sandbox-total-duration"]')?.textContent.trim() || '' })`)
+  return evaluate(`({ puzzleIds: Array.from(document.querySelectorAll('${SANDBOX}'), node => node.dataset.puzzleId), status: document.querySelector('${STATUS}')?.dataset.status, cases: Array.from(document.querySelectorAll('${CASES}'), node => ({ id: node.dataset.caseId, status: node.dataset.status })), error: document.querySelector('[data-testid="sandbox-error"]')?.textContent.trim() || '', duration: document.querySelector('[data-testid="sandbox-total-duration"]')?.textContent.trim() || '', summary: document.querySelector('${STATUS}')?.parentElement.textContent.trim() || '' })`)
 }
 
-async function expectStatus(expected, label) {
+async function expectStatus(expected, label, puzzle = currentPuzzle) {
+  assert.ok(puzzle?.caseIds.length, `${label}: expected puzzle cases are required`)
+  const expectedIds = puzzle.caseIds
   const accepted = Array.isArray(expected) ? expected : [expected]
   await waitFor(`${JSON.stringify(accepted)}.includes(document.querySelector('${STATUS}')?.dataset.status)`)
   const state = await sandboxState()
   assert.ok(RUN_STATUSES.includes(state.status), `${label}: unknown status ${state.status}`)
-  assert.deepEqual(state.cases.map(item => item.id), CASE_IDS, `${label}: incorrect fixed cases`)
+  assert.deepEqual(state.puzzleIds, [puzzle.id], `${label}: missing, duplicate or incorrect puzzle root`)
+  assert.deepEqual(state.cases.map(item => item.id), expectedIds, `${label}: incorrect ${puzzle.id} cases`)
+  assert.ok(await evaluate(`Array.from(document.querySelectorAll('${CASES}, ${STATUS}, [data-testid="sandbox-editor"]')).every(node => node.closest('${SANDBOX}')?.dataset.puzzleId === ${JSON.stringify(puzzle.id)})`), `${label}: sandbox components escaped puzzle root`)
+  const passedCount = state.cases.filter(item => item.status === 'passed').length
+  assert.match(state.summary, new RegExp(`通过\\s*${passedCount}\\s*/\\s*${expectedIds.length}\\s*例`), `${label}: incorrect passed/total summary`)
   assert.ok(state.cases.every(item => ['pending', 'running', ...RUN_STATUSES.filter(status => !['idle', 'invalid-input', 'runner-error'].includes(status))].includes(item.status)), `${label}: invalid case status`)
   if (state.status === 'idle') {
     assert.ok(state.cases.every(item => item.status === 'pending'), `${label}: idle cases must be pending`)
     assert.equal(state.error, '', `${label}: stale error after reset or navigation`)
   }
   if (state.status === 'passed') {
-    assert.ok(state.cases.every(item => item.status === 'passed'), `${label}: not all five cases passed`)
+    assert.ok(state.cases.every(item => item.status === 'passed'), `${label}: not all ${expectedIds.length} cases passed`)
     assert.match(state.duration, /\d/, `${label}: missing total duration`)
   }
   if (['syntax-error', 'runtime-error', 'timeout', 'output-limit', 'invalid-input', 'runner-error'].includes(state.status)) {
@@ -169,11 +193,13 @@ async function expectStatus(expected, label) {
   return state
 }
 
-async function runSource(label, source, expected) {
+async function runSource(label, source, expected, puzzle = currentPuzzle) {
   await editSource(source)
   await button('run')
-  const state = await expectStatus(expected, label)
-  console.log(`PASS sandbox ${label}: ${state.status}`)
+  const state = await expectStatus(expected, label, puzzle)
+  await waitForNoWorkers()
+  assert.equal(errors.length, 0, `${label}: unexpected browser errors/warnings: ${JSON.stringify(errors)}`)
+  console.log(`PASS sandbox ${puzzle.id} ${label}: ${state.status}`)
   return state
 }
 
@@ -187,11 +213,12 @@ async function waitForNoWorkers() {
   assert.fail('Sandbox Worker remains alive after completion or route leave')
 }
 
-async function startInfiniteRun() {
-  await editSource('function twoSum() { while (true) {} }')
+async function startInfiniteRun(puzzle = currentPuzzle) {
+  assert.ok(puzzle?.caseIds.length, 'Infinite run requires expected puzzle cases')
+  await editSource(`function ${puzzle.entryPoint}() { while (true) {} }`)
   await button('run')
-  await waitFor(`document.querySelector('${STATUS}')?.dataset.status === 'running' && document.querySelector('${CASES}[data-case-id="ordinary"]')?.dataset.status === 'running'`)
-  const state = await sandboxState()
+  await waitFor(`document.querySelector('${STATUS}')?.dataset.status === 'running' && document.querySelector('${CASES}[data-case-id="${puzzle.caseIds[0]}"]')?.dataset.status === 'running'`)
+  const state = await expectStatus('running', `${puzzle.id} infinite run started`, puzzle)
   assert.ok(state.cases.slice(1).every(item => item.status === 'pending'), 'Future cases must remain pending during execution')
   const start = Date.now()
   assert.equal(await evaluate('new Promise(resolve => requestAnimationFrame(() => resolve(document.readyState)))'), 'complete', 'Main thread did not respond during Worker loop')
@@ -204,28 +231,174 @@ async function assertNoSandboxWorker(label, responseStart = 0) {
   await waitForNoWorkers()
 }
 
-async function verifyAlgorithm() {
-  const puzzle = new URL('algorithm/two-sum.html', base)
-  await waitFor(`location.pathname === ${JSON.stringify(sectionUrl.pathname)} && !!document.querySelector('.vp-doc h1')`)
-  await navigate(sectionUrl, '.vp-doc h1')
-  assert.ok(await evaluate("!document.querySelector('.learning-slider')"), 'Algorithm index must not require a slider')
-  await waitFor(`Array.from(document.querySelectorAll('.vp-doc a[href]')).some(a => a.href === ${JSON.stringify(puzzle.href)}) && !!document.querySelector('.VPSidebar a[href="${puzzle.pathname}"]')`)
-  await assertNoSandboxWorker('Algorithm index')
-  await checkOverflow(DESKTOP_WIDTH)
-  await checkOverflow(MOBILE_WIDTH)
-  await checkOverflow(NARROW_WIDTH)
-  const articleResponseStart = responses.length
-  await navigate(puzzle, EDITOR)
-  await expectStatus('idle', 'initial state')
-  assert.ok((await sandboxState()).cases.every(item => item.status === 'pending'), 'Cases ran without user action')
-  assert.ok(!responses.slice(articleResponseStart).some(response => WORKER_ASSET.test(new URL(response.url).pathname)), 'Worker loaded before first run')
-  const initialCode = await evaluate(`document.querySelector(${JSON.stringify(EDITOR)}).textContent`)
-  assert.ok(initialCode.includes('twoSum'), 'Missing initial solution')
+async function checkEditorKeyboard() {
   assert.ok(await evaluate(`!!document.querySelector('${STATUS}').closest('[aria-live], [role="status"]')`), 'Missing accessible live status')
   await evaluate(`document.querySelector(${JSON.stringify(EDITOR)}).focus()`)
   await key('Tab', 'Tab', 9)
   assert.ok(await evaluate("!document.querySelector('[data-testid=\"sandbox-editor\"]').contains(document.activeElement)"), 'Tab traps focus inside editor')
   assert.ok(await evaluate("document.activeElement.matches(':focus-visible') && (getComputedStyle(document.activeElement).outlineStyle !== 'none' || getComputedStyle(document.activeElement).boxShadow !== 'none')"), 'Missing keyboard focus-visible indicator')
+}
+
+async function expectActualValues(puzzle = currentPuzzle) {
+  const actuals = await evaluate(`Array.from(document.querySelectorAll('${CASES}'), node => Array.from(node.querySelectorAll('dl > div')).find(row => row.querySelector('dt')?.textContent.trim() === '实际')?.querySelector('dd pre')?.textContent)`)
+  assert.equal(actuals.length, puzzle.caseIds.length, `${puzzle.id}: missing actual rows`)
+  for (const [index, actual] of actuals.entries()) {
+    const label = `${puzzle.id}/${puzzle.caseIds[index]}`
+    assert.equal(typeof actual, 'string', `${label}: missing actual output, including zero or not-found`)
+    assert.deepEqual(JSON.parse(actual), puzzle.expected[index], `${label}: incorrect rendered actual`)
+    if (typeof puzzle.expected[index] === 'number') assert.equal(actual, String(puzzle.expected[index]), `${label}: numeric output lost or changed`)
+  }
+}
+
+async function switchPuzzle(puzzle) {
+  const url = new URL(`algorithm/${puzzle.id}.html`, base)
+  await waitFor(`Array.from(document.querySelectorAll('.VPSidebar a[href]')).some(a => a.href === ${JSON.stringify(url.href)})`)
+  await evaluate(`Array.from(document.querySelectorAll('.VPSidebar a[href]')).find(a => a.href === ${JSON.stringify(url.href)}).click()`)
+  currentPuzzle = puzzle
+  await waitFor(`location.pathname === ${JSON.stringify(url.pathname)} && document.querySelector('${SANDBOX}')?.dataset.puzzleId === ${JSON.stringify(puzzle.id)} && !!document.querySelector(${JSON.stringify(EDITOR)})`)
+  await expectStatus('idle', `${puzzle.id} route arrival`)
+  await waitForNoWorkers()
+}
+
+async function verifyBinarySearch(initialCodes) {
+  currentPuzzle = PUZZLE_CHECKS['binary-search']
+  await navigate(new URL('algorithm/binary-search.html', base), EDITOR)
+  await expectStatus('idle', 'binary-search initial state')
+  const initialCode = initialCodes.get(currentPuzzle.id)
+  assert.equal(await editorSource(), initialCode, 'binary-search navigation retained another source')
+  await runSource('reference linear lookup', BINARY_SOLUTION, 'passed')
+  await expectActualValues()
+  const fixtures = [
+    ['always missing', 'function binarySearch() { return -1 }', 'wrong-answer'],
+    ['numeric string index', 'function binarySearch(nums, target) { return String(nums.indexOf(target)) }', 'wrong-answer'],
+    ['array index', 'function binarySearch(nums, target) { return [nums.indexOf(target)] }', 'wrong-answer'],
+    ['fractional index', 'function binarySearch() { return 0.5 }', 'wrong-answer'],
+    ['syntax error', 'function binarySearch( {', 'syntax-error'],
+    ['runtime error', 'function binarySearch() { throw new Error("binary runtime probe") }', 'runtime-error'],
+    ['explicit SyntaxError in function', 'function binarySearch() { throw new SyntaxError("binary function probe") }', 'runtime-error'],
+    ['top-level SyntaxError', 'throw new SyntaxError("binary top-level probe"); function binarySearch() {}', 'runtime-error'],
+    ['wrong puzzle entry', SOLUTION, 'runtime-error'],
+    ['async result', 'async function binarySearch(nums, target) { return nums.indexOf(target) }', 'runtime-error'],
+    ['undefined result', 'function binarySearch() {}', 'wrong-answer'],
+    ['NaN result', 'function binarySearch() { return NaN }', 'wrong-answer'],
+    ['Infinity result', 'function binarySearch() { return Infinity }', 'wrong-answer'],
+    ['negative Infinity result', 'function binarySearch() { return -Infinity }', 'wrong-answer'],
+    ['mutation cannot forge index', 'function binarySearch(nums, target) { nums[0] = target; return 0 }', 'wrong-answer'],
+    ['clean run after mutation', BINARY_SOLUTION, 'passed'],
+  ]
+  for (const [label, source, expected] of fixtures) {
+    const state = await runSource(label, source, expected)
+    if (label === 'always missing') {
+      assert.deepEqual(state.cases.map(item => item.status), ['wrong-answer', 'wrong-answer', 'wrong-answer', 'passed', 'passed', 'wrong-answer', 'passed'], 'binary-search missing semantics changed')
+    }
+    if (['numeric string index', 'array index', 'fractional index', 'undefined result', 'NaN result', 'Infinity result', 'negative Infinity result'].includes(label)) {
+      assert.ok(state.cases.every(item => item.status === 'wrong-answer'), `${label}: invalid return accepted`)
+    }
+  }
+  for (const action of ['timeout', 'stop', 'reset']) {
+    await startInfiniteRun()
+    if (action !== 'timeout') await button(action)
+    const expected = action === 'reset' ? 'idle' : action === 'stop' ? 'stopped' : 'timeout'
+    const state = await expectStatus(expected, `binary-search ${action} during loop`)
+    if (action !== 'reset') {
+      assert.equal(state.cases[0].status, expected, `binary-search ${action}: first case not interrupted`)
+      assert.ok(state.cases.slice(1).every(item => item.status === 'pending'), `binary-search ${action}: unexecuted cases changed`)
+    } else {
+      assert.equal(await editorSource(), initialCode, 'binary-search reset did not restore initial source')
+    }
+    await waitForNoWorkers()
+    if (action === 'reset') {
+      await button('run')
+      await expectStatus('passed', 'binary-search initial solution after reset')
+    } else await runSource(`recovery after ${action}`, BINARY_SOLUTION, 'passed')
+    await delay(RUN_TIMEOUT_MS + POLL_MS)
+    await expectStatus('passed', `binary-search stale ${action} timer cannot overwrite recovery`)
+    await expectActualValues()
+    await waitForNoWorkers()
+  }
+  await startInfiniteRun()
+  await switchPuzzle(PUZZLE_CHECKS['two-sum'])
+  assert.equal(await editorSource(), initialCodes.get(currentPuzzle.id), 'two-sum inherited binary-search source')
+  await button('run')
+  await expectStatus('passed', 'two-sum after binary-search route leave')
+  await delay(RUN_TIMEOUT_MS + POLL_MS)
+  await expectStatus('passed', 'binary-search stale route timer cannot overwrite two-sum')
+  await expectActualValues()
+  await waitForNoWorkers()
+  await startInfiniteRun()
+  await switchPuzzle(PUZZLE_CHECKS['binary-search'])
+  assert.equal(await editorSource(), initialCode, 'binary-search inherited two-sum source')
+  await button('run')
+  await expectStatus('passed', 'binary-search after two-sum route leave')
+  await delay(RUN_TIMEOUT_MS + POLL_MS)
+  await expectStatus('passed', 'two-sum stale route timer cannot overwrite binary-search')
+  await expectActualValues()
+  await waitForNoWorkers()
+  for (const width of [MOBILE_WIDTH, NARROW_WIDTH]) {
+    await checkOverflow(width)
+    await checkEditorKeyboard()
+    await runSource(`${width}px keyboard input`, BINARY_SOLUTION, 'passed')
+    await evaluate("document.documentElement.classList.add('dark')")
+    await checkOverflow(width)
+    await checkEditorContrast(`binary-search dark ${width}px`)
+    await runSource(`dark ${width}px keyboard input`, BINARY_SOLUTION, 'passed')
+    await expectActualValues()
+    await evaluate("document.documentElement.classList.remove('dark')")
+    await delay(POLL_MS)
+    await checkEditorContrast(`binary-search light ${width}px`)
+  }
+  console.log('PASS binary-search: seven-case semantics, integer output, lifecycle, cross-puzzle routes, keyboard, 375/320px, dark contrast')
+}
+
+async function verifyAlgorithm() {
+  const puzzle = new URL('algorithm/two-sum.html', base)
+  await waitFor(`location.pathname === ${JSON.stringify(sectionUrl.pathname)} && !!document.querySelector('.vp-doc h1')`)
+  await navigate(sectionUrl, '.vp-doc h1')
+  assert.ok(await evaluate("!document.querySelector('.learning-slider')"), 'Algorithm index must not require a slider')
+  await waitFor(`Array.from(document.querySelectorAll('.vp-doc a[href]')).some(a => a.href === ${JSON.stringify(puzzle.href)}) && Array.from(document.querySelectorAll('.VPSidebar a[href]')).some(a => a.href === ${JSON.stringify(puzzle.href)})`)
+  await assertNoSandboxWorker('Algorithm index')
+  await checkOverflow(DESKTOP_WIDTH)
+  await checkOverflow(MOBILE_WIDTH)
+  await checkOverflow(NARROW_WIDTH)
+  const pages = await evaluate(`Array.from(new Set(Array.from(document.querySelectorAll('.VPSidebar a[href]'), a => { const url = new URL(a.href); url.hash = ''; url.search = ''; return url.href }).filter(href => new URL(href).origin === location.origin && new URL(href).pathname.startsWith(${JSON.stringify(sectionUrl.pathname)}) && new URL(href).pathname !== ${JSON.stringify(sectionUrl.pathname)})))`)
+  const expectedPages = Object.keys(PUZZLE_CHECKS).map(id => new URL(`algorithm/${id}.html`, base).href)
+  for (const page of expectedPages) assert.ok(pages.includes(page), `Missing puzzle sidebar entry: ${page}`)
+  const initialCodes = new Map()
+  for (const page of pages) {
+    currentPuzzle = Object.values(PUZZLE_CHECKS).find(item => new URL(`algorithm/${item.id}.html`, base).href === page)
+    assert.ok(currentPuzzle, `Discovered algorithm page requires explicit expected cases: ${page}`)
+    assert.ok(await evaluate(`Array.from(document.querySelectorAll('.vp-doc a[href]')).some(a => a.href === ${JSON.stringify(page)})`), `Missing resolved index article link: ${page}`)
+  }
+  for (const page of pages) {
+    currentPuzzle = Object.values(PUZZLE_CHECKS).find(item => new URL(`algorithm/${item.id}.html`, base).href === page)
+    const responseStart = responses.length
+    await navigate(page, EDITOR)
+    await expectStatus('idle', `${currentPuzzle.id} discovered page initial state`)
+    assert.ok(!responses.slice(responseStart).some(response => WORKER_ASSET.test(new URL(response.url).pathname)), `${page}: Worker loaded before user action`)
+    const source = await editorSource()
+    assert.ok(source.includes(currentPuzzle.entryPoint), `${page}: missing configured entry point`)
+    initialCodes.set(currentPuzzle.id, source)
+    await checkEditorKeyboard()
+    await button('run')
+    await expectStatus('passed', `${currentPuzzle.id} initial ${currentPuzzle.caseIds.length} cases`)
+    await expectActualValues()
+    await waitForNoWorkers()
+    await runSource('fresh compartment for configured cases', `globalThis.localCaseProbe = (globalThis.localCaseProbe || 0) + 1; if (globalThis.localCaseProbe !== 1) throw new Error('State leaked between cases');\n${source}`, 'passed')
+    await button('reset')
+    await expectStatus('idle', `${currentPuzzle.id} reset after isolation probe`)
+    assert.equal(await editorSource(), source, `${page}: reset failed to restore configured source`)
+    assert.equal(errors.length, 0, `${page}: unexpected browser errors/warnings: ${JSON.stringify(errors)}`)
+    console.log(`PASS discovered ${currentPuzzle.id}: ${currentPuzzle.caseIds.length} initial cases, configured root, isolated execution`)
+  }
+  currentPuzzle = PUZZLE_CHECKS['two-sum']
+  const articleResponseStart = responses.length
+  await navigate(puzzle, EDITOR)
+  await expectStatus('idle', 'initial state')
+  assert.ok((await sandboxState()).cases.every(item => item.status === 'pending'), 'Cases ran without user action')
+  assert.ok(!responses.slice(articleResponseStart).some(response => WORKER_ASSET.test(new URL(response.url).pathname)), 'Worker loaded before first run')
+  const initialCode = await editorSource()
+  assert.ok(initialCode.includes('twoSum'), 'Missing initial solution')
+  await checkEditorKeyboard()
   await button('run')
   await expectStatus('passed', 'initial five cases')
   await waitForNoWorkers()
@@ -309,14 +482,14 @@ async function verifyAlgorithm() {
   await button('reset')
   await expectStatus('idle', 'reset during run')
   await waitForNoWorkers()
-  assert.equal(await evaluate(`document.querySelector(${JSON.stringify(EDITOR)}).textContent`), initialCode, 'Reset did not restore initial solution')
+  assert.equal(await editorSource(), initialCode, 'Reset did not restore initial solution')
   assert.ok((await sandboxState()).cases.every(item => item.status === 'pending'), 'Reset did not clear cases')
   await button('run')
   await expectStatus('passed', 'run after reset')
   await delay(RUN_TIMEOUT_MS + POLL_MS)
   await expectStatus('passed', 'old reset timer cannot overwrite new run')
   await startInfiniteRun()
-  await evaluate(`document.querySelector('.VPSidebar a[href="${sectionUrl.pathname}"]').click()`)
+  await evaluate(`Array.from(document.querySelectorAll('.VPSidebar a[href]')).find(a => a.href === ${JSON.stringify(sectionUrl.href)}).click()`)
   await waitFor(`location.pathname === ${JSON.stringify(sectionUrl.pathname)} && !document.querySelector('${SANDBOX}')`)
   await waitForNoWorkers()
   await evaluate(`Array.from(document.querySelectorAll('.vp-doc a[href]')).find(a => a.href === ${JSON.stringify(puzzle.href)}).click()`)
@@ -346,9 +519,17 @@ async function verifyAlgorithm() {
   await delay(POLL_MS)
   await checkEditorContrast('light')
   await waitForNoWorkers()
-  console.log('PASS algorithm: five-case judging, isolation, bounded output, lifecycle, keyboard, 375/320px, dark, reduced motion')
+  console.log('PASS two-sum: five-case judging, isolation, bounded output, lifecycle, keyboard, 375/320px, dark, reduced motion')
+  await verifyBinarySearch(initialCodes)
+  for (const response of responses.filter(response => WORKER_ASSET.test(new URL(response.url).pathname))) {
+    const url = new URL(response.url)
+    assert.equal(url.origin, base.origin, 'Worker loaded outside local preview')
+    assert.ok(url.pathname.startsWith(`${base.pathname}assets/`), `Worker ignores site base: ${url.pathname}`)
+    assert.equal(response.status, 200, `Worker resource failed: ${url.pathname}`)
+  }
+  assert.equal(errors.length, 0, `Algorithm browser errors/warnings: ${JSON.stringify(errors)}`)
   console.log(`Worker response paths: ${JSON.stringify([...new Set(responses.filter(response => WORKER_ASSET.test(new URL(response.url).pathname)).map(response => new URL(response.url).pathname))])}`)
-  return [sectionUrl.href, puzzle.href]
+  return [sectionUrl.href, ...pages]
 }
 
 try {

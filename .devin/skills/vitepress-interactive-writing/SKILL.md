@@ -59,7 +59,7 @@ description: 为 VitePress 创建或改写互动技术教程，复用项目教�
 
 | 导出 | 教学用途 | 接口 |
 | --- | --- | --- |
-| AlgorithmSandbox | 同步 JavaScript 算法编辑与固定用例判题 | 必需 id: string（页内唯一）、puzzleId: 'two-sum'；模板使用 puzzle-id="two-sum"，用 ClientOnly 包裹。编辑器在客户端加载，执行器位于 Worker；正文和限制说明保留 SSR。 |
+| AlgorithmSandbox | 同步 JavaScript 算法编辑与固定用例判题 | 必需 id: string（页内唯一）、puzzleId: PuzzleId（从 PUZZLES 注册表键自动推导）；当前可选 two-sum、binary-search，模板如 puzzle-id="binary-search"，用 ClientOnly 包裹。签名、具名 JSON 参数与期望提示由题目配置提供。编辑器在客户端加载，执行器位于 Worker；正文和限制说明保留 SSR。 |
 
 算法专题以单一沙盒完成操作、观察和解释，不套用四类 Learning 交互数量要求；总览保持静态，题目页默认只有一个沙盒。
 
@@ -79,6 +79,17 @@ description: 为 VitePress 创建或改写互动技术教程，复用项目教�
 - Markdown 站内链接由 VitePress 处理；Vue 中的 href 使用 withBase，不写死部署前缀。
 - 公共组件已获准变更时更新真实导出索引、此技能接口表，并检查已有调用。不要每次输出组件源码、实现说明或复制项目配置。
 
+### 算法题新增步骤
+
+1. 读取 `config/.vitepress/theme/components/sandbox/algorithm-puzzles.ts`、`sandbox-types.ts` 和目标判题接口，先明确同步入口、参数顺序、输入前提、返回类型与边界。`JsonValue` 表示递归 JSON 数据：只用有限数值和无循环的普通数据，不包含函数、访问器、数组空位或异步值。
+2. 在现有 `algorithm-puzzles.ts` 中用 `definePuzzle` 添加题目配置：填写 `id`、`title`、`entryPoint`、`parameterNames`、`judge`、`expectedHint`、`failureMessage`、`initialCode` 和 `tests`。每例提供唯一 `id`、可读 `label`、按参数顺序排列的 `args` 及 JSON `expected`；参数数量与 `parameterNames` 一致。初始代码必须符合本题契约并通过全部固定用例，覆盖正常、边界和未找到等适用情况。
+3. 将题目注册到同文件的 `PUZZLES`，键必须与配置 `id` 一致。`PuzzleId` 从注册表键自动推导，`JudgeId` 从受信任 `JUDGES` 表键自动推导，不手工维护题目 ID 联合类型或另一份允许列表。
+4. 普通题选择 `judge: 'json-equal'`，按 JSON 类型与值精确比较；数组顺序敏感，对象键顺序不敏感。仅在题意需要等价答案时，在 `algorithm-judges.ts` 的受信任函数表 `JUDGES` 增加专属判题函数，再由题目配置引用其 ID。判题逻辑在执行器侧使用，不从沙盒公共索引重导出到主线程，也不把用户代码作为判题器。
+5. 普通 JSON 判题的新题无需修改 `AlgorithmSandbox.vue`、Worker 通信或执行生命周期；展示直接使用配置的标题、入口、参数名、`args`、期望值与提示。保留 `id` / `puzzleId` props、既有 `data-testid` 与根节点 `data-puzzle-id`，不要为每道题增加 UI 分支。
+6. 新建 `docs/algorithm/<题目短名>.md`，复用同一个 `AlgorithmSandbox` 并用 ClientOnly 包裹，正文保留 SSR。按“题意 → 初始解法 → 操作、观察、原理 → 边界与正确性 → 复杂度 → 验收”组织，一页默认一个沙盒，不堆叠四种 Learning 组件。案例表与注册数据一致，说明特有契约，不能把两数之和的唯一解或顺序不限当作通用规则。
+7. 更新算法总览与 `config/.vitepress/config.mts` 的算法 sidebar。已有算法专题入口时无需修改首页或文章分类；不新增依赖，不使用未声明包，不另建过程文档。
+8. 在浏览器脚本 `verify-site.mjs` 的 `PUZZLE_CHECKS` 补充新题的路径、用例 ID 和参考解等验证配置；未知页面会明确失败，不能跳过。补充非法返回、边界及跨题路由切换检查，回归原题与停止、重置、超时、隔离等执行边界。纯逻辑脚本会自动遍历注册表运行各题初始代码与共用错误场景。按下节完成构建和 algorithm、linux 冒烟检查；未执行的检查明确交付给后续验证，不把预期结果写成实测结论。
+
 ### 4. Review：验证与交付
 在仓库根目录使用 PowerShell：
 
@@ -97,13 +108,19 @@ node .devin/skills/vitepress-interactive-writing/scripts/verify-site.mjs http://
 
 构建通过后检查部署 base 下的首页、专题总览和全部章节：入口链接、浏览器控制台、滑块与数字联动、选项卡点击/键盘、翻面按钮、移动端溢出、暗色模式和减少动态效果。脚本回归既有 Vue 基础文章；迁移项目时替换回归路径。自动检查不能替代视觉验收、屏幕阅读器测试和教程命令验证。
 
-算法专题另运行专用分支，不替代上述 Linux 验证流程和四个 Learning 组件断言：
+算法专题先用 Node.js 22.19+ 执行纯逻辑与实际 Worker 模块的 Node 适配测试，验证有界 JSON 快照、比较器、注册配置和逐题入口。类型擦除运行不等于 TypeScript 类型检查，Node 适配测试也不能代替浏览器 Worker 验证。
+
+```powershell
+node --experimental-strip-types .devin/skills/vitepress-interactive-writing/scripts/verify-sandbox.mjs
+```
+
+随后运行浏览器专用分支，不替代上述 Linux 验证流程和四个 Learning 组件断言：
 
 ```powershell
 node .devin/skills/vitepress-interactive-writing/scripts/verify-site.mjs http://127.0.0.1:4173/myBlog/ algorithm
 ```
 
-algorithm 分支应覆盖静态总览、单沙盒题目页、5 例初始解法、反向下标、非法答案、语法与运行时错误、异步返回拒绝、停止/重置/超时、输出预算、能力隔离、路由清理、部署 base 资源加载和窄屏键盘操作，不要求四类 Learning 交互。发布前仍须运行原 linux 分支；脚本分支未实现或检查未执行时如实报告，不能用构建成功代替。
+algorithm 分支应覆盖静态总览、各题单沙盒页面、两数之和 5 例与二分查找 7 例初始解法、两数之和反向下标、二分查找标量返回与空数组/未找到/首尾边界、非法答案、语法与运行时错误、异步返回拒绝、停止/重置/超时、输出预算、能力隔离、跨题路由切换与清理、部署 base 资源加载和窄屏键盘操作，不要求四类 Learning 交互。发布前仍须运行原 linux 分支；脚本分支未实现或检查未执行时如实报告，不能用构建成功代替。
 
 对新增代码进行正确性、安全性、可访问性、SSR 与维护性评审，修正后重跑相关检查。`git diff --check` 检查空白问题；新文件也必须纳入审阅，不能只看已跟踪 diff。
 

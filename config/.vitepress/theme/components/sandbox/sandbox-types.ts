@@ -1,3 +1,6 @@
+import type { PUZZLES } from './algorithm-puzzles'
+import type { JUDGES } from './algorithm-judges'
+
 export const MAX_CODE_LENGTH = 32 * 1024
 export const MAX_TEST_CASES = 20
 export const MAX_INPUT_BYTES = 64 * 1024
@@ -10,21 +13,27 @@ export const MAX_VALUE_NODES = 2048
 export const WORKER_STARTUP_TIMEOUT_MS = 10000
 export const MAX_RUN_TIME_MS = 3000
 
-export type PuzzleId = 'two-sum'
+export type JsonValue = null | boolean | number | string | readonly JsonValue[] | { readonly [key: string]: JsonValue }
+export type PuzzleId = keyof typeof PUZZLES
+export type JudgeId = keyof typeof JUDGES
 export type CaseStatus = 'passed' | 'wrong-answer' | 'syntax-error' | 'runtime-error' | 'output-limit' | 'timeout' | 'stopped'
 export type RunStatus = CaseStatus | 'idle' | 'running' | 'invalid-input' | 'runner-error'
 
 export interface AlgorithmTestCase {
   readonly id: string
   readonly label: string
-  readonly nums: readonly number[]
-  readonly target: number
-  readonly expected: readonly [number, number]
+  readonly args: readonly JsonValue[]
+  readonly expected: JsonValue
 }
 
 export interface AlgorithmPuzzle {
-  readonly id: PuzzleId
+  readonly id: string
   readonly title: string
+  readonly entryPoint: string
+  readonly parameterNames: readonly string[]
+  readonly judge: JudgeId
+  readonly expectedHint: string
+  readonly failureMessage: string
   readonly initialCode: string
   readonly tests: readonly AlgorithmTestCase[]
 }

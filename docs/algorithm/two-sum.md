@@ -31,6 +31,8 @@ import { AlgorithmSandbox } from '../../config/.vitepress/theme/components/sandb
 - 下标顺序不限：有效答案 `[0, 1]` 与 `[1, 0]` 等价。不是返回对应的两个数值。
 - 直接返回数组，不写 `export` 或 `module.exports`，不返回 Promise 或其他 thenable，不使用 `async` 入口。
 
+参数与返回值遵循[总览的同步函数与 JSON 契约](./#同步函数契约)。有且只有一组解、返回两个下标及顺序不限都是**本题专属规则**，不适用于其他题目；本题使用下标语义判题，而非数组逐项精确比对。
+
 ### 本题的 5 个固定用例
 
 | 用例 | `nums` | `target` | 一种期望下标 | 要检查的边界 |

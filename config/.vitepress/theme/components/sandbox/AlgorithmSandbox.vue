@@ -19,6 +19,7 @@ import type { AlgorithmPuzzle, CaseResult, CaseStatus, PuzzleId, RunRequest, Run
 
 const props = defineProps<{ id: string; puzzleId: PuzzleId }>()
 const puzzle = computed(() => getPuzzle(props.puzzleId))
+const signature = computed(() => `${puzzle.value.entryPoint}(${puzzle.value.parameterNames.join(', ')})`)
 const source = ref(puzzle.value.initialCode)
 const status = ref<RunStatus>('idle')
 const running = computed(() => status.value === 'running')
@@ -433,12 +434,12 @@ function durationLabel(value: number): string {
 </script>
 
 <template>
-  <section :id="id" class="sandbox" data-testid="sandbox" :aria-labelledby="`${id}-title`">
+  <section :id="id" class="sandbox" data-testid="sandbox" :data-puzzle-id="puzzle.id" :aria-labelledby="`${id}-title`">
     <div class="sandbox__heading">
       <h2 :id="`${id}-title`">{{ puzzle.title }} · 算法沙盒</h2>
       <span class="sandbox__language">JavaScript</span>
     </div>
-    <p :id="`${id}-editor-help`" class="sandbox__hint">同步函数 twoSum(nums, target)。Tab 可移出编辑区；运行时源码只读。</p>
+    <p :id="`${id}-editor-help`" class="sandbox__hint">同步函数 {{ signature }}。Tab 可移出编辑区；运行时源码只读。</p>
     <p v-if="editorLoadState === 'loading'" class="sandbox__hint" role="status">正在加载代码编辑器，可先在文本框中编辑。</p>
     <div class="sandbox__editor" data-testid="sandbox-editor" :class="{ 'sandbox__editor--readonly': running }">
       <div ref="editorHost" />
@@ -486,8 +487,11 @@ function durationLabel(value: number): string {
           <span v-if="row.result" class="sandbox__hint">{{ durationLabel(row.result.durationMs) }}</span>
         </div>
         <dl>
-          <div><dt>输入</dt><dd><code>nums = {{ JSON.stringify(row.test.nums) }}, target = {{ row.test.target }}</code></dd></div>
-          <div><dt>期望</dt><dd><code>{{ JSON.stringify(row.test.expected) }}</code>（下标顺序不限）</dd></div>
+          <div>
+            <dt>输入</dt>
+            <dd><code v-for="(argument, index) in row.test.args" :key="index">{{ index ? ', ' : '' }}{{ puzzle.parameterNames[index] }} = {{ JSON.stringify(argument) }}</code><span v-if="!row.test.args.length">无参数</span></dd>
+          </div>
+          <div><dt>期望</dt><dd><code>{{ JSON.stringify(row.test.expected) }}</code><span v-if="puzzle.expectedHint">（{{ puzzle.expectedHint }}）</span></dd></div>
           <div><dt>实际</dt><dd><pre v-if="row.result?.actual">{{ row.result.actual }}</pre><span v-else>—</span></dd></div>
           <div v-if="row.result?.error"><dt>错误</dt><dd class="sandbox__error"><pre>{{ row.result.error }}</pre></dd></div>
         </dl>
