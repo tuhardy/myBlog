@@ -20,6 +20,7 @@ export default defineConfig({
       { text: '🏠 首页', link: '/' },
       { text: '前端',    link: '/frontend/' },
       { text: '后端',    link: '/backend/' },
+      { text: 'Linux',   link: '/linux/' },
       { text: '中间件',  link: '/middleware/' },
       {
         text: '数据库',
@@ -41,6 +42,18 @@ export default defineConfig({
 
     // ================= 左侧侧边栏：按目录分组 =================
     sidebar: {
+      '/linux/': [
+        {
+          text: 'Linux 从入门到高级',
+          items: [
+            { text: '学习路线与实验环境', link: '/linux/' },
+            { text: '入门：命令行与文件', link: '/linux/basics' },
+            { text: '进阶：系统管理', link: '/linux/administration' },
+            { text: '实战：Shell 自动化', link: '/linux/automation' },
+            { text: '高级：性能与故障排查', link: '/linux/advanced' },
+          ],
+        },
+      ],
       // ----- 前端 -----
       '/frontend/': [
         {

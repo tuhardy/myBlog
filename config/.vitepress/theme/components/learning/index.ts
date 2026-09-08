@@ -1,0 +1,4 @@
+export { default as LearningTabs } from './LearningTabs.vue'
+export { default as LearningSlider } from './LearningSlider.vue'
+export { default as LearningCounter } from './LearningCounter.vue'
+export { default as LearningFlipCard } from './LearningFlipCard.vue'

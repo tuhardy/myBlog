@@ -37,6 +37,12 @@ const features: GalleryFeature[] = [
     tagline: 'MySQL、Redis 缓存三大难题与设计模式沉淀。',
     link: '/database/',
   },
+  {
+    icon: '$_',
+    title: 'Linux · 从入门到高级',
+    tagline: '从命令行起步，动手掌握系统管理、Shell 自动化与性能排障。',
+    link: '/linux/',
+  },
 ]
 </script>
 
@@ -208,5 +214,22 @@ const features: GalleryFeature[] = [
 }
 .dark .mag-card:hover .mag-card__foot {
   background: rgba(143, 168, 200, 0.08);
+}
+.mag-card:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 4px;
+  border-color: var(--vp-c-brand-1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mag-card,
+  .mag-card__no,
+  .mag-card__title,
+  .mag-card__foot {
+    transition: none;
+  }
+  .mag-card:hover {
+    animation: none;
+    transform: none;
+  }
 }
 </style>
