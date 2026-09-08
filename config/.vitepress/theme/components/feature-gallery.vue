@@ -43,6 +43,12 @@ const features: GalleryFeature[] = [
     tagline: '从命令行起步，动手掌握系统管理、Shell 自动化与性能排障。',
     link: '/linux/',
   },
+  {
+    icon: 'f(x)',
+    title: '算法 · JavaScript 沙盒',
+    tagline: '从两数之和开始，改写同步函数，观察判题结果与复杂度权衡。',
+    link: '/algorithm/',
+  },
 ]
 </script>
 

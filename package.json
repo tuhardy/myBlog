@@ -7,5 +7,11 @@
     "docs:dev": "vitepress dev config",
     "docs:build": "vitepress build config",
     "docs:preview": "vitepress preview config"
+  },
+  "dependencies": {
+    "@codemirror/lang-javascript": "6.2.5",
+    "@codemirror/language": "6.12.4",
+    "codemirror": "6.0.2",
+    "ses": "2.3.0"
   }
 }

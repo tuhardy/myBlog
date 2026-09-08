@@ -114,6 +114,7 @@ function getCategoryName(url: string): string {
   if (url.startsWith('/frontend/')) return '前端'
   if (url.startsWith('/backend/')) return '后端'
   if (url.startsWith('/linux/')) return 'Linux'
+  if (url.startsWith('/algorithm/')) return '算法'
   if (url.startsWith('/middleware/')) return '中间件'
   if (url.startsWith('/database/')) return '数据库'
   if (url.startsWith('/design-mode/')) return '设计模式'

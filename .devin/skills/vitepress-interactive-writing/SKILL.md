@@ -55,6 +55,14 @@ description: 为 VitePress 创建或改写互动技术教程，复用项目教�
 
 `docs/<专题>/<页面>.md` 的导入路径为 `../../config/.vitepress/theme/components/learning`。其他深度需重新计算，不能盲目复制。示例课程为 `docs/linux/`，仅按需读取相关页，不全量加载。
 
+算法沙盒使用独立索引 `config/.vitepress/theme/components/sandbox/index.ts`，不从 learning 或主题入口重导出。`docs/algorithm/two-sum.md` 命名导入路径为 `../../config/.vitepress/theme/components/sandbox`。
+
+| 导出 | 教学用途 | 接口 |
+| --- | --- | --- |
+| AlgorithmSandbox | 同步 JavaScript 算法编辑与固定用例判题 | 必需 id: string（页内唯一）、puzzleId: 'two-sum'；模板使用 puzzle-id="two-sum"，用 ClientOnly 包裹。编辑器在客户端加载，执行器位于 Worker；正文和限制说明保留 SSR。 |
+
+算法专题以单一沙盒完成操作、观察和解释，不套用四类 Learning 交互数量要求；总览保持静态，题目页默认只有一个沙盒。
+
 ## 发布 SOP：Plan → Review → Act → Review
 
 ### 1. Plan：定位与策划
@@ -88,6 +96,14 @@ node .devin/skills/vitepress-interactive-writing/scripts/verify-site.mjs http://
 脚本要求 Node.js 22+ 与本机 Chromium 系浏览器，Windows 默认使用 Edge；其他安装位置可设置 BROWSER_PATH 环境变量。参数依次为含部署 base 且以斜杠结尾的本地预览地址、专题短名。脚本从首页卡片进入专题，并从侧边栏发现章节；当前用于每页采用四个 Learning 组件且首个滑块与数字展示联动的教程。不匹配该结构的教程需调整验证用例，不能跳过失败后声称通过。
 
 构建通过后检查部署 base 下的首页、专题总览和全部章节：入口链接、浏览器控制台、滑块与数字联动、选项卡点击/键盘、翻面按钮、移动端溢出、暗色模式和减少动态效果。脚本回归既有 Vue 基础文章；迁移项目时替换回归路径。自动检查不能替代视觉验收、屏幕阅读器测试和教程命令验证。
+
+算法专题另运行专用分支，不替代上述 Linux 验证流程和四个 Learning 组件断言：
+
+```powershell
+node .devin/skills/vitepress-interactive-writing/scripts/verify-site.mjs http://127.0.0.1:4173/myBlog/ algorithm
+```
+
+algorithm 分支应覆盖静态总览、单沙盒题目页、5 例初始解法、反向下标、非法答案、语法与运行时错误、异步返回拒绝、停止/重置/超时、输出预算、能力隔离、路由清理、部署 base 资源加载和窄屏键盘操作，不要求四类 Learning 交互。发布前仍须运行原 linux 分支；脚本分支未实现或检查未执行时如实报告，不能用构建成功代替。
 
 对新增代码进行正确性、安全性、可访问性、SSR 与维护性评审，修正后重跑相关检查。`git diff --check` 检查空白问题；新文件也必须纳入审阅，不能只看已跟踪 diff。
 

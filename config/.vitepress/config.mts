@@ -21,6 +21,7 @@ export default defineConfig({
       { text: '前端',    link: '/frontend/' },
       { text: '后端',    link: '/backend/' },
       { text: 'Linux',   link: '/linux/' },
+      { text: '算法',    link: '/algorithm/' },
       { text: '中间件',  link: '/middleware/' },
       {
         text: '数据库',
@@ -42,6 +43,15 @@ export default defineConfig({
 
     // ================= 左侧侧边栏：按目录分组 =================
     sidebar: {
+      '/algorithm/': [
+        {
+          text: 'JavaScript 算法沙盒',
+          items: [
+            { text: '总览与运行边界', link: '/algorithm/' },
+            { text: '两数之和：从双循环到哈希表', link: '/algorithm/two-sum' },
+          ],
+        },
+      ],
       '/linux/': [
         {
           text: 'Linux 从入门到高级',
