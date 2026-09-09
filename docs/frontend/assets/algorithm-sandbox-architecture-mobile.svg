@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="674" viewBox="0 0 320 674" role="img" aria-labelledby="architecture-mobile-title architecture-mobile-desc">
+  <title id="architecture-mobile-title">算法沙盒执行边界：窄屏版</title>
+  <desc id="architecture-mobile-desc">主线程与 Worker 是两个执行区域，通过 run 和结果消息交互。主线程负责编辑、显示、计时和终止。Worker 每轮新建，在其中为每个用例创建 SES Compartment，仅提供日志门面与参数副本。用户结果先转换为有界 JSON 快照，再由可信判题器使用宿主固定用例检查。题库各自加载，不共享内存；没有内存硬配额。</desc>
+  <defs>
+    <marker id="m-blue" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 7 3.5 0 7Z" fill="#356ba6"/></marker>
+    <marker id="m-teal" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 7 3.5 0 7Z" fill="#287b72"/></marker>
+  </defs>
+  <rect width="320" height="674" rx="14" fill="#f8fafc"/>
+  <g font-family="sans-serif" fill="#23364d">
+    <text x="20" y="33" font-size="22" font-weight="600">算法沙盒 / 执行边界</text>
+    <rect x="16" y="54" width="288" height="114" rx="12" fill="#ffffff" stroke="#d0dbe7"/>
+    <rect x="16" y="75" width="3" height="25" rx="1.5" fill="#356ba6"/>
+    <text x="34" y="88" font-size="22" font-weight="600">主线程</text>
+    <text x="34" y="119" font-size="18">编辑 · 展示 · 计时 · 清理</text>
+    <text x="34" y="150" font-size="18" fill="#526278">PUZZLES：独立配置副本</text>
+    <path d="M125 177V210" stroke="#356ba6" stroke-width="1.7" marker-end="url(#m-blue)"/>
+    <path d="M195 210V177" stroke="#287b72" stroke-width="1.7" marker-end="url(#m-teal)"/>
+    <text x="79" y="198" font-size="18" fill="#356ba6">run</text>
+    <text x="211" y="198" font-size="18" fill="#287b72">结果</text>
+    <rect x="16" y="222" width="288" height="372" rx="12" fill="#ffffff" stroke="#cddedb"/>
+    <rect x="16" y="243" width="3" height="25" rx="1.5" fill="#287b72"/>
+    <text x="34" y="256" font-size="22" font-weight="600">Worker 宿主</text>
+    <text x="34" y="286" font-size="18" fill="#526278">lockdown() · 每轮新建</text>
+    <rect x="30" y="305" width="260" height="88" rx="9" fill="#f0f8f6" stroke="#438e83" stroke-width="1.3" stroke-dasharray="5 4"/>
+    <text x="46" y="334" font-size="20" font-weight="600">SES Compartment</text>
+    <text x="46" y="359" font-size="18">用户函数 · 每例重新创建</text>
+    <text x="46" y="383" font-size="18" fill="#285c56">仅日志门面与参数副本</text>
+    <path d="M160 399V418" stroke="#287b72" stroke-width="1.5" marker-end="url(#m-teal)"/>
+    <rect x="30" y="429" width="260" height="52" rx="9" fill="#f5f8fa" stroke="#d5dfe7"/>
+    <text x="46" y="461" font-size="20" font-weight="500">有界 JSON 快照</text>
+    <path d="M160 487V506" stroke="#287b72" stroke-width="1.5" marker-end="url(#m-teal)"/>
+    <rect x="30" y="517" width="260" height="62" rx="9" fill="#f5f8fa" stroke="#d5dfe7"/>
+    <text x="46" y="543" font-size="20" font-weight="500">可信判题 · JUDGES</text>
+    <text x="46" y="568" font-size="18" fill="#526278">固定用例与期望留在宿主</text>
+    <text x="20" y="627" font-size="18" fill="#526278">停止或超时：主线程终止 Worker</text>
+    <text x="20" y="655" font-size="18" fill="#895a1a">独立数据副本，不是内存硬隔离</text>
+  </g>
+</svg>

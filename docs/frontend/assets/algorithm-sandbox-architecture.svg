@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="590" viewBox="0 0 720 590" role="img" aria-labelledby="architecture-title architecture-desc">
+  <title id="architecture-title">算法沙盒：主线程与 Worker 的执行边界</title>
+  <desc id="architecture-desc">左侧主线程负责编辑、展示、计时与清理；右侧 Worker 宿主在 lockdown 后为每个用例创建 SES Compartment。请求与结果在两侧通过结构化消息传递，主线程可终止 Worker。用户函数只获得日志门面与参数副本，返回宿主后形成有界 JSON 快照，再由 JUDGES 使用宿主固定用例判题。题库是两侧分别加载的独立副本，不共享内存；没有内存硬配额。</desc>
+  <defs>
+    <marker id="a-blue" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 7 3.5 0 7Z" fill="#356ba6"/></marker>
+    <marker id="a-teal" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 7 3.5 0 7Z" fill="#287b72"/></marker>
+    <marker id="a-amber" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 7 3.5 0 7Z" fill="#9b681f"/></marker>
+  </defs>
+  <rect width="720" height="590" rx="16" fill="#f8fafc"/>
+  <g font-family="sans-serif" fill="#23364d">
+    <text x="24" y="36" font-size="24" font-weight="600">算法沙盒 / 浏览器运行时</text>
+    <text x="24" y="65" font-size="16" fill="#526278">交互与控制留在主线程，用户函数在受限环境内执行。</text>
+    <rect x="24" y="94" width="228" height="410" rx="14" fill="#ffffff" stroke="#d0dbe7"/>
+    <rect x="334" y="94" width="362" height="410" rx="14" fill="#ffffff" stroke="#cddedb"/>
+    <rect x="24" y="116" width="3" height="30" rx="1.5" fill="#356ba6"/>
+    <rect x="334" y="116" width="3" height="30" rx="1.5" fill="#287b72"/>
+    <text x="44" y="131" font-size="22" font-weight="600">主线程</text>
+    <text x="44" y="159" font-size="16" fill="#526278">交互与运行控制</text>
+    <path d="M44 178H232" stroke="#e8edf3"/>
+    <text x="44" y="211" font-size="18">CodeMirror 编辑</text>
+    <text x="44" y="245" font-size="18">运行状态与结果展示</text>
+    <text x="44" y="279" font-size="18">计时、停止、清理</text>
+    <rect x="40" y="313" width="196" height="82" rx="9" fill="#f4f7fb"/>
+    <text x="54" y="343" font-size="18" font-weight="500">PUZZLES</text>
+    <text x="54" y="373" font-size="16" fill="#526278">题目配置的独立副本</text>
+    <rect x="40" y="434" width="196" height="42" rx="8" fill="#edf4fc"/>
+    <text x="138" y="461" text-anchor="middle" font-size="16" fill="#356ba6">不执行用户函数</text>
+    <text x="354" y="131" font-size="22" font-weight="600">Worker 宿主</text>
+    <text x="354" y="159" font-size="16" fill="#526278">lockdown() · 每轮重新创建</text>
+    <rect x="352" y="182" width="326" height="113" rx="10" fill="#f0f8f6" stroke="#438e83" stroke-width="1.4" stroke-dasharray="5 4"/>
+    <text x="370" y="214" font-size="20" font-weight="600">SES Compartment</text>
+    <text x="370" y="244" font-size="18">用户函数 · 每个用例重新创建</text>
+    <rect x="370" y="261" width="94" height="24" rx="12" fill="#dfeee9"/>
+    <rect x="476" y="261" width="94" height="24" rx="12" fill="#dfeee9"/>
+    <text x="417" y="278" text-anchor="middle" font-size="16" fill="#285c56">日志门面</text>
+    <text x="523" y="278" text-anchor="middle" font-size="16" fill="#285c56">参数副本</text>
+    <path d="M515 299V315H429V329" fill="none" stroke="#287b72" stroke-width="1.5" marker-end="url(#a-teal)"/>
+    <rect x="352" y="333" width="154" height="67" rx="9" fill="#f5f8fa" stroke="#d5dfe7"/>
+    <text x="429" y="359" text-anchor="middle" font-size="18" font-weight="600">JSON 快照</text>
+    <text x="429" y="385" text-anchor="middle" font-size="16" fill="#526278">有界格式化</text>
+    <path d="M510 367H523" stroke="#287b72" stroke-width="1.5" marker-end="url(#a-teal)"/>
+    <rect x="528" y="333" width="150" height="67" rx="9" fill="#f5f8fa" stroke="#d5dfe7"/>
+    <text x="603" y="359" text-anchor="middle" font-size="18" font-weight="600">可信判题</text>
+    <text x="603" y="385" text-anchor="middle" font-size="16" fill="#526278">JUDGES</text>
+    <rect x="352" y="426" width="326" height="50" rx="9" fill="#f4f7fb"/>
+    <text x="370" y="457" font-size="18">PUZZLES · 固定用例与期望</text>
+    <path d="M603 422V405" stroke="#287b72" stroke-width="1.4" stroke-dasharray="3 3" marker-end="url(#a-teal)"/>
+    <path d="M254 210H330" stroke="#356ba6" stroke-width="1.7" marker-end="url(#a-blue)"/>
+    <text x="292" y="198" text-anchor="middle" font-size="16" fill="#356ba6">run</text>
+    <path d="M332 253H256" stroke="#287b72" stroke-width="1.7" marker-end="url(#a-teal)"/>
+    <text x="292" y="241" text-anchor="middle" font-size="16" fill="#287b72">结果</text>
+    <path d="M254 296H330" stroke="#9b681f" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#a-amber)"/>
+    <text x="292" y="284" text-anchor="middle" font-size="16" fill="#895a1a">终止</text>
+    <text x="24" y="542" font-size="16" fill="#526278">题库分别加载，不共享内存；只有结构化数据跨线程传递。</text>
+    <text x="24" y="570" font-size="16" fill="#895a1a">这是能力隔离与可终止执行，不承诺独立内存配额。</text>
+  </g>
+</svg>

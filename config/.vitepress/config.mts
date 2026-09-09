@@ -74,6 +74,7 @@ export default defineConfig({
             { text: '前端入门',            link: '/frontend/getting-started' },
             { text: 'Vue 基础',            link: '/frontend/vue-basics' },
             { text: '工程化实践',          link: '/frontend/tooling' },
+            { text: '纯前端算法沙盒实战',  link: '/frontend/algorithm-sandbox' },
           ],
         },
       ],

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="710" viewBox="0 0 320 710" role="img" aria-labelledby="execution-mobile-title execution-mobile-desc">
+  <title id="execution-mobile-title">运行时序窄屏版：启动、逐例处理与收尾</title>
+  <desc id="execution-mobile-desc">主线程创建 Worker 并等待 lockdown 后的 ready，启动最多等待 10 秒。ready 后发送 run，开始整轮 3 秒计时。每例先 case-start，再创建隔离环境、解析工厂并调用用户函数；宿主生成有界 JSON 快照并可信判题，发回 case-result。done 后清理并终止 Worker；停止、超时、异常或离页可以提前终止。图按顺序组织，不按实际耗时比例绘制。</desc>
+  <defs>
+    <marker id="em-teal" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 7 3.5 0 7Z" fill="#287b72"/></marker>
+  </defs>
+  <rect width="320" height="710" rx="14" fill="#f8fafc"/>
+  <g font-family="sans-serif" fill="#23364d">
+    <text x="20" y="33" font-size="22" font-weight="600">一次运行 / 三个阶段</text>
+    <rect x="16" y="54" width="288" height="137" rx="12" fill="#ffffff" stroke="#d0dbe7"/>
+    <rect x="16" y="75" width="3" height="25" rx="1.5" fill="#356ba6"/>
+    <text x="34" y="88" font-size="22" font-weight="600">01　启动</text>
+    <text x="34" y="119" font-size="18">创建 Worker → lockdown()</text>
+    <text x="34" y="150" font-size="18">ready 后发送 run</text>
+    <text x="34" y="178" font-size="18" fill="#526278">启动最多等待 10 秒</text>
+    <path d="M160 199V219" stroke="#287b72" stroke-width="1.5" marker-end="url(#em-teal)"/>
+    <rect x="16" y="232" width="288" height="265" rx="12" fill="#ffffff" stroke="#cddedb"/>
+    <rect x="16" y="253" width="3" height="25" rx="1.5" fill="#287b72"/>
+    <text x="34" y="266" font-size="22" font-weight="600">02　逐例处理</text>
+    <text x="34" y="299" font-size="18">case-start → 新隔离环境</text>
+    <text x="34" y="333" font-size="18">解析工厂 → 调用用户函数</text>
+    <text x="34" y="367" font-size="18">返回值 → JSON 快照</text>
+    <text x="34" y="401" font-size="18">可信判题 → case-result</text>
+    <rect x="30" y="421" width="260" height="59" rx="8" fill="#edf6f3"/>
+    <text x="46" y="447" font-size="18" fill="#285c56">整轮共用 3 秒预算</text>
+    <text x="46" y="471" font-size="18" fill="#285c56">不是每例重新计时</text>
+    <path d="M160 505V525" stroke="#287b72" stroke-width="1.5" marker-end="url(#em-teal)"/>
+    <rect x="16" y="538" width="288" height="91" rx="12" fill="#ffffff" stroke="#d0dbe7"/>
+    <rect x="16" y="559" width="3" height="25" rx="1.5" fill="#356ba6"/>
+    <text x="34" y="572" font-size="22" font-weight="600">03　收尾</text>
+    <text x="34" y="605" font-size="18">done → 清理并终止 Worker</text>
+    <text x="20" y="663" font-size="18" fill="#526278">停止 / 超时 / 异常 / 离页</text>
+    <text x="20" y="691" font-size="18" fill="#895a1a">可提前终止，不必等待 done</text>
+  </g>
+</svg>

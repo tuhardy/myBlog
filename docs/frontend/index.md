@@ -14,6 +14,7 @@ layout: doc
   * [前端入门：从零搭建开发环境](./getting-started.md)
   * [Vue 基础与组件化思维](./vue-basics.md)
   * [工程化实践：Vite + TS + Lint 配置](./tooling.md)
+  * [纯前端算法沙盒：架构与实现复盘](./algorithm-sandbox.md)
 
 ::: tip 提示
 这里是前端分类的入口页，后续你可以把真实的文章替换或追加到本目录，并同步更新上方导览链接。

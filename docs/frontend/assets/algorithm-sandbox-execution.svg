@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="724" viewBox="0 0 720 724" role="img" aria-labelledby="execution-title execution-desc">
+  <title id="execution-title">算法沙盒：一轮运行的消息时序</title>
+  <desc id="execution-desc">从左到右为主线程、Worker 宿主和 SES Compartment。主线程创建 Worker，等待 lockdown 初始化后的 ready，启动等待上限为 10 秒。随后发送 run，开始整轮 3 秒计时。每个用例先通知 case-start，再新建 Compartment，解析工厂后调用用户函数。返回值由宿主进行有界 JSON 快照和可信判题，异常形成错误状态，再发送 case-result。结束后发送 done，由主线程清理并 terminate。停止、超时、执行器异常或离页可以提前终止；图只表示顺序，不按耗时比例绘制。</desc>
+  <defs>
+    <marker id="e-blue" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 7 3.5 0 7Z" fill="#356ba6"/></marker>
+    <marker id="e-teal" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 7 3.5 0 7Z" fill="#287b72"/></marker>
+    <marker id="e-amber" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 7 3.5 0 7Z" fill="#9b681f"/></marker>
+  </defs>
+  <rect width="720" height="724" rx="16" fill="#f8fafc"/>
+  <g font-family="sans-serif" fill="#23364d">
+    <text x="24" y="35" font-size="24" font-weight="600">一次运行 / 消息与生命周期</text>
+    <text x="24" y="64" font-size="16" fill="#526278">从启动到收尾；纵向表示顺序，不代表实际耗时。</text>
+    <rect x="24" y="88" width="180" height="46" rx="10" fill="#edf4fc" stroke="#d0dbe7"/>
+    <rect x="267" y="88" width="180" height="46" rx="10" fill="#edf6f3" stroke="#cddedb"/>
+    <rect x="510" y="88" width="186" height="46" rx="10" fill="#f0f8f6" stroke="#438e83" stroke-dasharray="5 4"/>
+    <text x="114" y="118" text-anchor="middle" font-size="20" font-weight="600">主线程</text>
+    <text x="357" y="118" text-anchor="middle" font-size="20" font-weight="600">Worker 宿主</text>
+    <text x="603" y="118" text-anchor="middle" font-size="18" font-weight="600">Compartment</text>
+    <path d="M114 140V630 M357 169V630 M603 357V457" stroke="#c0cdd9" stroke-width="1.3" stroke-dasharray="4 5"/>
+    <path d="M114 167H354" stroke="#356ba6" stroke-width="1.6" marker-end="url(#e-blue)"/>
+    <text x="190" y="156" font-size="16" fill="#356ba6">创建 Worker</text>
+    <rect x="43" y="182" width="142" height="27" rx="7" fill="#fff6e8"/>
+    <text x="114" y="201" text-anchor="middle" font-size="16" fill="#895a1a">启动最多 10 秒</text>
+    <rect x="287" y="181" width="140" height="28" rx="7" fill="#ffffff" stroke="#d9e5e1"/>
+    <text x="357" y="201" text-anchor="middle" font-size="16">lockdown()</text>
+    <path d="M357 227H117" stroke="#287b72" stroke-width="1.6" marker-end="url(#e-teal)"/>
+    <text x="218" y="218" font-size="16" fill="#287b72">ready</text>
+    <path d="M114 260H354" stroke="#356ba6" stroke-width="1.6" marker-end="url(#e-blue)"/>
+    <text x="172" y="251" font-size="16" fill="#356ba6">run / 开始计时</text>
+    <rect x="24" y="282" width="672" height="269" rx="12" fill="none" stroke="#a8c8bf" stroke-width="1.2"/>
+    <rect x="38" y="290" width="330" height="26" rx="6" fill="#eaf4ef"/>
+    <text x="50" y="308" font-size="16" fill="#285c56">逐例循环 · 整轮共用 3 秒预算</text>
+    <path d="M357 338H117" stroke="#287b72" stroke-width="1.5" marker-end="url(#e-teal)"/>
+    <text x="186" y="330" font-size="16" fill="#287b72">case-start</text>
+    <path d="M357 373H600" stroke="#287b72" stroke-width="1.5" marker-end="url(#e-teal)"/>
+    <text x="426" y="363" font-size="16" fill="#287b72">新建隔离环境</text>
+    <rect x="523" y="388" width="160" height="58" rx="9" fill="#ffffff" stroke="#438e83" stroke-dasharray="5 4"/>
+    <text x="603" y="411" text-anchor="middle" font-size="18">解析工厂</text>
+    <text x="603" y="435" text-anchor="middle" font-size="18">调用用户函数</text>
+    <path d="M603 464H360" stroke="#287b72" stroke-width="1.5" marker-end="url(#e-teal)"/>
+    <text x="429" y="456" font-size="16" fill="#287b72">返回值 / 异常</text>
+    <rect x="266" y="479" width="182" height="38" rx="8" fill="#ffffff" stroke="#d5dfe7"/>
+    <text x="357" y="504" text-anchor="middle" font-size="16">快照判题 / 错误状态</text>
+    <path d="M357 537H117" stroke="#287b72" stroke-width="1.5" marker-end="url(#e-teal)"/>
+    <text x="185" y="528" font-size="16" fill="#287b72">case-result</text>
+    <path d="M357 583H117" stroke="#287b72" stroke-width="1.6" marker-end="url(#e-teal)"/>
+    <text x="218" y="574" font-size="16" fill="#287b72">done</text>
+    <path d="M114 626H347" stroke="#9b681f" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#e-amber)"/>
+    <text x="162" y="614" font-size="16" fill="#895a1a">清理并 terminate()</text>
+    <path d="M350 618L364 634 M364 618L350 634" stroke="#9b681f" stroke-width="1.7"/>
+    <rect x="24" y="658" width="672" height="46" rx="10" fill="#fff6e8" stroke="#e7d9be"/>
+    <text x="40" y="687" font-size="16" fill="#895a1a">停止、超时、执行器异常或离页 → 主线程提前终止，不等待 done</text>
+  </g>
+</svg>

@@ -221,7 +221,7 @@ async function startInfiniteRun(puzzle = currentPuzzle) {
   const state = await expectStatus('running', `${puzzle.id} infinite run started`, puzzle)
   assert.ok(state.cases.slice(1).every(item => item.status === 'pending'), 'Future cases must remain pending during execution')
   const start = Date.now()
-  assert.equal(await evaluate('new Promise(resolve => requestAnimationFrame(() => resolve(document.readyState)))'), 'complete', 'Main thread did not respond during Worker loop')
+  assert.equal(await evaluate('new Promise(resolve => { const channel = new MessageChannel(); channel.port1.onmessage = () => { channel.port1.close(); channel.port2.close(); resolve(document.readyState) }; channel.port2.postMessage(null) })'), 'complete', 'Main thread did not respond during Worker loop')
   assert.ok(Date.now() - start < RUN_TIMEOUT_MS, 'Main thread only responded after run timeout')
 }
 
@@ -348,6 +348,100 @@ async function verifyBinarySearch(initialCodes) {
     await checkEditorContrast(`binary-search light ${width}px`)
   }
   console.log('PASS binary-search: seven-case semantics, integer output, lifecycle, cross-puzzle routes, keyboard, 375/320px, dark contrast')
+}
+
+async function verifyFrontendArticle() {
+  const front = new URL('frontend/', base)
+  const article = new URL('frontend/algorithm-sandbox.html', base)
+  const viewerCases = [
+    { id: 'architecture', title: '算法沙盒 · 执行架构' },
+    { id: 'execution', title: '算法沙盒 · 运行时序' },
+  ]
+  const expectedDiagramCount = viewerCases.length
+  const responseStart = responses.length
+  await navigate(front, '.vp-doc h1')
+  await waitFor(`Array.from(document.querySelectorAll('.vp-doc a[href]')).some(a => a.href === ${JSON.stringify(article.href)})`)
+  await assertNoSandboxWorker('Frontend index', responseStart)
+  currentPuzzle = PUZZLE_CHECKS['two-sum']
+  await navigate(article, EDITOR)
+  await expectStatus('idle', 'frontend article initial state')
+  assert.ok(await evaluate(`Array.from(document.querySelectorAll('.VPSidebar a[href]')).some(a => a.href === ${JSON.stringify(article.href)})`), 'Missing frontend article sidebar entry')
+  await waitFor(`Array.from(document.querySelectorAll('.sandbox-diagram img')).filter(img => img.getClientRects().length).length === ${expectedDiagramCount} && Array.from(document.querySelectorAll('.sandbox-diagram img')).every(img => img.complete && img.naturalWidth > 0 && img.alt.trim())`)
+  const diagrams = await evaluate("Array.from(document.querySelectorAll('.sandbox-diagram img'), img => ({ source: img.currentSrc, link: img.closest('a')?.href, target: img.closest('a')?.target, rel: img.closest('a')?.rel, viewer: !!img.closest('.architecture-diagram') }))")
+  const diagramMetrics = new Map()
+  for (const diagram of diagrams) {
+    const url = new URL(diagram.source)
+    assert.equal(url.origin, base.origin, 'Article diagram must be an accessible file, not an inline data URL')
+    assert.ok(url.pathname.startsWith(base.pathname), 'Article diagram ignores site base')
+    if (!diagram.viewer) assert.equal(diagram.link, diagram.source, 'Missing original SVG link')
+    assert.equal(diagram.target, '_blank', 'Original SVG should open in a new tab')
+    assert.ok(diagram.rel.split(' ').includes('noopener'), 'Original SVG link lacks noopener')
+    const response = await fetch(diagram.source)
+    assert.equal(response.status, 200, 'Article diagram resource failed')
+    const source = await response.text()
+    const metrics = await evaluate(`(() => {
+      const doc = new DOMParser().parseFromString(${JSON.stringify(source)}, 'image/svg+xml')
+      if (doc.querySelector('parsererror') || doc.documentElement.localName !== 'svg' || !doc.querySelector('title')?.textContent || !doc.querySelector('desc')?.textContent) throw new Error('Invalid SVG or missing accessible descriptions')
+      const svg = doc.documentElement
+      svg.style.cssText = 'position:fixed;left:-10000px;top:0;visibility:hidden'
+      document.body.append(svg)
+      try {
+        const width = svg.viewBox.baseVal.width
+        const texts = Array.from(svg.querySelectorAll('text'))
+        return { width, minFont: Math.min(...texts.map(text => parseFloat(getComputedStyle(text).fontSize))), clipped: texts.filter(text => { const box = text.getBBox(); return box.x < 0 || box.x + box.width > width }).map(text => text.textContent) }
+      } finally { svg.remove() }
+    })()`)
+    assert.deepEqual(metrics.clipped, [], 'SVG text extends beyond its viewBox')
+    diagramMetrics.set(diagram.source, metrics)
+  }
+  await checkEditorKeyboard()
+  await button('run')
+  await expectStatus('passed', 'frontend article reused sandbox')
+  await expectActualValues()
+  await runSource('frontend article wrong answer', 'function twoSum() { return [] }', 'wrong-answer')
+  await button('reset')
+  await expectStatus('idle', 'frontend article reset')
+  const minimumDiagramFontPx = 14
+  const layoutTolerancePx = 1
+  for (const width of [DESKTOP_WIDTH, MOBILE_WIDTH, NARROW_WIDTH]) {
+    await checkOverflow(width)
+    const layouts = await evaluate("Array.from(document.querySelectorAll('.sandbox-diagram'), figure => { const image = Array.from(figure.querySelectorAll('img')).find(img => img.getClientRects().length); return { width: figure.clientWidth, scroll: figure.scrollWidth, image: image.getBoundingClientRect().width, source: image.currentSrc } })")
+    for (const layout of layouts) {
+      assert.ok(layout.scroll <= layout.width + layoutTolerancePx && layout.image <= layout.width + layoutTolerancePx, `${width}px diagram requires horizontal scrolling`)
+      const metrics = diagramMetrics.get(layout.source)
+      const font = metrics.minFont * layout.image / metrics.width
+      assert.ok(font >= minimumDiagramFontPx, `${width}px diagram text shrank to ${font.toFixed(2)}px`)
+    }
+    for (const expected of viewerCases) {
+      const selector = `.architecture-diagram a[data-diagram="${expected.id}"]`
+      await evaluate(`document.querySelector(${JSON.stringify(selector)}).focus()`)
+      await key('Enter', 'Enter', 13)
+      await waitFor("document.querySelector('.architecture-viewer').open")
+      const viewer = await evaluate("const dialog = document.querySelector('.architecture-viewer'); const box = dialog.getBoundingClientRect(); const images = Array.from(dialog.querySelectorAll('img')).filter(img => img.getClientRects().length); ({ title: dialog.querySelector('h2').textContent.trim(), source: images[0]?.currentSrc, left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: innerWidth, height: innerHeight, images: images.length, imageBottom: images[0]?.getBoundingClientRect().bottom, focusInside: dialog.contains(document.activeElement) })")
+      assert.equal(viewer.title, expected.title, 'Shared viewer retained the previous diagram title')
+      assert.ok(viewer.source.includes(`algorithm-sandbox-${expected.id}`), 'Shared viewer opened the wrong image')
+      assert.ok(viewer.left >= 0 && viewer.top >= 0 && viewer.right <= viewer.width + layoutTolerancePx && viewer.bottom <= viewer.height + layoutTolerancePx, 'Diagram viewer does not fit the viewport')
+      assert.equal(viewer.images, 1, 'Diagram viewer shows multiple responsive variants')
+      assert.ok(viewer.focusInside && viewer.imageBottom <= viewer.bottom + layoutTolerancePx, 'Diagram viewer focus or image fitting failed')
+      await key('Escape', 'Escape', 27)
+      await waitFor(`!document.querySelector('.architecture-viewer').open && document.activeElement === document.querySelector(${JSON.stringify(selector)})`)
+    }
+  }
+  await evaluate("document.querySelector('.architecture-diagram a').click()")
+  await waitFor("document.querySelector('.architecture-viewer').open")
+  await evaluate("document.querySelector('.architecture-viewer button').click()")
+  await waitFor("!document.querySelector('.architecture-viewer').open")
+  await evaluate("document.querySelector('.sandbox-diagram a').focus()")
+  assert.ok(await evaluate("getComputedStyle(document.activeElement).outlineStyle !== 'none'"), 'Original SVG link lacks keyboard focus')
+  await evaluate("document.documentElement.classList.add('dark')")
+  await checkOverflow(NARROW_WIDTH)
+  await checkEditorContrast('frontend article dark')
+  await evaluate("document.documentElement.classList.remove('dark')")
+  await startInfiniteRun()
+  await evaluate(`Array.from(document.querySelectorAll('.VPSidebar a[href]')).find(a => a.href === ${JSON.stringify(front.href)}).click()`)
+  await waitFor(`location.pathname === ${JSON.stringify(front.pathname)} && !document.querySelector('${SANDBOX}')`)
+  await waitForNoWorkers()
+  console.log('PASS frontend article: prerendering, original SVG links, unclipped readable diagrams without horizontal scrolling, reused sandbox, reset, responsive, dark and route cleanup')
 }
 
 async function verifyAlgorithm() {
@@ -521,6 +615,7 @@ async function verifyAlgorithm() {
   await waitForNoWorkers()
   console.log('PASS two-sum: five-case judging, isolation, bounded output, lifecycle, keyboard, 375/320px, dark, reduced motion')
   await verifyBinarySearch(initialCodes)
+  await verifyFrontendArticle()
   for (const response of responses.filter(response => WORKER_ASSET.test(new URL(response.url).pathname))) {
     const url = new URL(response.url)
     assert.equal(url.origin, base.origin, 'Worker loaded outside local preview')
@@ -581,7 +676,7 @@ try {
   await command('Runtime.enable')
   await command('Network.enable')
   await command('Network.setCacheDisabled', { cacheDisabled: true })
-  if (section === 'algorithm') {
+  if (section === 'algorithm' || section === 'frontend') {
     await command('Target.setDiscoverTargets', { discover: true }, null)
     await command('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: true, flatten: true })
   }
@@ -600,11 +695,15 @@ try {
   await command('Emulation.setEmulatedMedia', { features: [] })
   await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 0, y: 0 })
   await checkOverflow(MOBILE_WIDTH)
-  if (section === 'algorithm') await assertNoSandboxWorker('Homepage')
+  if (section === 'algorithm' || section === 'frontend') await assertNoSandboxWorker('Homepage')
   await evaluate(`document.querySelector('.feature-gallery a[href="${sectionUrl.pathname}"]').click()`)
   let pages
   if (section === 'algorithm') {
     pages = await verifyAlgorithm()
+  } else if (section === 'frontend') {
+    await waitFor(`location.pathname === ${JSON.stringify(sectionUrl.pathname)} && !!document.querySelector('.vp-doc h1')`)
+    await verifyFrontendArticle()
+    pages = [sectionUrl.href, new URL('frontend/algorithm-sandbox.html', base).href]
   } else {
     await waitFor(`location.pathname === ${JSON.stringify(sectionUrl.pathname)} && !!document.querySelector('.learning-slider input')`)
     pages = await evaluate(`Array.from(new Set([location.href, ...Array.from(document.querySelectorAll('.VPSidebar a[href]'), a => a.href).filter(href => new URL(href).pathname.startsWith(${JSON.stringify(sectionUrl.pathname)}))]))`)
@@ -655,7 +754,7 @@ try {
   const regression = new URL('frontend/vue-basics.html', base)
   const regressionResponseStart = responses.length
   await navigate(regression, '.vp-doc h1')
-  if (section === 'algorithm') await assertNoSandboxWorker('Existing Vue article', regressionResponseStart)
+  if (section === 'algorithm' || section === 'frontend') await assertNoSandboxWorker('Existing Vue article', regressionResponseStart)
   assert.equal(errors.length, 0, `Browser errors/warnings: ${JSON.stringify(errors)}`)
   console.log(`PASS homepage card, ${pages.length} topic pages, existing article, zero browser errors/warnings`)
 } finally {
