@@ -37,6 +37,7 @@ export default defineConfig({
         items: [
           { text: '笔记总览',       link: '/notes/' },
           { text: 'Markdown 教程',  link: '/notes/markdown-tutorial/' },
+          { text: '互动组件',       link: '/notes/learning-components/' },
         ],
       },
     ],
