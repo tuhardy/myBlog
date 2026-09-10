@@ -26,8 +26,8 @@ const PUZZLE_CHECKS = {
   },
   'binary-search': {
     id: 'binary-search', entryPoint: 'binarySearch',
-    caseIds: ['middle', 'first', 'last', 'missing', 'empty', 'single-found', 'single-missing'],
-    expected: [4, 0, 4, -1, -1, 0, -1],
+    caseIds: ['first', 'middle', 'last', 'missing', 'empty', 'single-found', 'single-missing'],
+    expected: [0, 4, 2, -1, -1, 0, -1],
   },
 }
 const BINARY_SOLUTION = 'function binarySearch(nums, target) { return nums.indexOf(target) }'
@@ -417,6 +417,8 @@ async function verifyFrontendArticle() {
       await evaluate(`document.querySelector(${JSON.stringify(selector)}).focus()`)
       await key('Enter', 'Enter', 13)
       await waitFor("document.querySelector('.architecture-viewer').open")
+      const expectedSrc = 'algorithm-sandbox-' + expected.id
+      await waitFor(`(() => { const img = Array.from(document.querySelectorAll('.architecture-viewer img')).find(i => i.getClientRects().length); return img && img.complete && img.currentSrc.includes(${JSON.stringify(expectedSrc)}); })()`)
       const viewer = await evaluate("const dialog = document.querySelector('.architecture-viewer'); const box = dialog.getBoundingClientRect(); const images = Array.from(dialog.querySelectorAll('img')).filter(img => img.getClientRects().length); ({ title: dialog.querySelector('h2').textContent.trim(), source: images[0]?.currentSrc, left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: innerWidth, height: innerHeight, images: images.length, imageBottom: images[0]?.getBoundingClientRect().bottom, focusInside: dialog.contains(document.activeElement) })")
       assert.equal(viewer.title, expected.title, 'Shared viewer retained the previous diagram title')
       assert.ok(viewer.source.includes(`algorithm-sandbox-${expected.id}`), 'Shared viewer opened the wrong image')

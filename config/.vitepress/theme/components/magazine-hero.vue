@@ -76,10 +76,10 @@ const latest = computed(() => props.stats?.latestLabel ?? '—')
           <div class="mag-hero__portrait">
             <img :src="avatarSrc" alt="博主头像" />
           </div>
-          <figcaption class="mag-hero__caption">
+          <div class="mag-hero__caption">
             <span class="mag-hero__caption-main">博主与他的狗</span>
             <span class="mag-hero__caption-sub mag-mono">FIG.01 · 2026</span>
-          </figcaption>
+          </div>
         </div>
       </figure>
     </div>

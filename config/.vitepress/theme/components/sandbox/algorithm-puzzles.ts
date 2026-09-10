@@ -105,9 +105,9 @@ export const BINARY_SEARCH = definePuzzle({
   return -1
 }`,
   tests: [
-    { id: 'middle', label: '命中中间元素', args: [[-1, 0, 3, 5, 9, 12], 9], expected: 4 },
-    { id: 'first', label: '命中首元素', args: [[-1, 0, 3, 5, 9, 12], -1], expected: 0 },
-    { id: 'last', label: '命中末元素', args: [[2, 4, 6, 8, 10], 10], expected: 4 },
+    { id: 'first', label: '首元素也是左邻', args: [[5, 6, 7], 5], expected: 0 },
+    { id: 'middle', label: '命中内部元素', args: [[-1, 0, 3, 5, 9, 12], 9], expected: 4 },
+    { id: 'last', label: '末元素也是右邻', args: [[5, 6, 7], 7], expected: 2 },
     { id: 'missing', label: '目标不存在', args: [[1, 3, 5, 7], 4], expected: -1 },
     { id: 'empty', label: '空数组', args: [[], 3], expected: -1 },
     { id: 'single-found', label: '单元素命中', args: [[8], 8], expected: 0 },
