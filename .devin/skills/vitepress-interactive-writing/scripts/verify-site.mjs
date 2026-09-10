@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
+import { fileURLToPath } from 'node:url'
 
 const DEFAULT_BASE = 'http://127.0.0.1:4173/myBlog/'
 const DEFAULT_SECTION = 'linux'
@@ -40,13 +42,41 @@ const RUN_STATUSES = ['idle', 'running', 'passed', 'wrong-answer', 'syntax-error
 const SOLVE_BODY = 'for (let i = 0; i < nums.length; i++) { for (let j = i + 1; j < nums.length; j++) { if (nums[i] + nums[j] === target) return [i, j] } } return []'
 const SOLUTION = `function twoSum(nums, target) { ${SOLVE_BODY} }`
 const WORKER_ASSET = /\/[^/]*algorithm-runner[^/]*\.js$/
-const base = new URL(process.argv[2] || DEFAULT_BASE)
-const section = process.argv[3] || DEFAULT_SECTION
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..')
+const args = process.argv.slice(2)
+const serve = args.includes('--serve')
+const positional = args.filter(arg => arg !== '--serve')
+const isUrl = value => /^https?:\/\//.test(value || '')
+const base = new URL(isUrl(positional[0]) ? positional[0] : DEFAULT_BASE)
+const section = (isUrl(positional[0]) ? positional[1] : positional[0]) || DEFAULT_SECTION
 assert.ok(['localhost', '127.0.0.1', '[::1]'].includes(base.hostname), 'Only local previews are supported')
 assert.match(section, /^[a-z0-9-]+$/)
 assert.ok(base.pathname.endsWith('/'), 'Base URL must end with /')
 const sectionUrl = new URL(`${section}/`, base)
-const browserPath = process.env.BROWSER_PATH || 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
+let preview
+if (serve) {
+  const vitepressBin = join(repoRoot, 'node_modules', 'vitepress', 'bin', 'vitepress.js')
+  assert.ok(existsSync(vitepressBin), `Missing VitePress CLI: ${vitepressBin}`)
+  preview = spawn(process.execPath, [vitepressBin, 'preview', 'config', '--host', base.hostname, '--port', base.port || '4173'], { cwd: repoRoot, stdio: 'ignore' })
+  const started = Date.now()
+  for (;;) {
+    try {
+      if ((await fetch(base)).ok) break
+    } catch { }
+    assert.ok(preview.exitCode === null, `Preview exited early: ${preview.exitCode}`)
+    assert.ok(Date.now() - started < WAIT_MS * 4, 'Preview server did not become ready')
+    await delay(POLL_MS)
+  }
+  console.log(`PASS preview ready: ${base}`)
+}
+const BROWSER_CANDIDATES = [
+  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+  'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+]
+const browserPath = [process.env.BROWSER_PATH, ...BROWSER_CANDIDATES].filter(Boolean).find(candidate => existsSync(candidate))
+assert.ok(browserPath, 'No Chromium-family browser found; set BROWSER_PATH to an Edge/Chrome executable')
 const profile = await mkdtemp(join(tmpdir(), 'vitepress-learning-check-'))
 const browser = spawn(browserPath, [
   '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
@@ -629,6 +659,65 @@ async function verifyAlgorithm() {
   return [sectionUrl.href, ...pages]
 }
 
+// 专属探针注册表：键为组件根 class（learning-xxx，按 BEM 约定根节点不含 __）。
+// 新组件未注册时不阻塞验证——页面上自动发现后仅跑通用断言并打印提示；
+// 需要更深的交互断言时在此补充探针。
+const COMPONENT_PROBES = {
+  'learning-tabs': async page => {
+    const tabCount = await evaluate("document.querySelectorAll('[role=tab]').length")
+    assert.ok(tabCount >= 2, `Tabs need at least two options: ${page}`)
+    await evaluate("document.querySelectorAll('[role=tab]')[1].click()")
+    await waitFor("document.querySelectorAll('[role=tab]')[1].getAttribute('aria-selected') === 'true'")
+    await evaluate("document.querySelectorAll('[role=tab]')[1].focus()")
+    await key('Home', 'Home', 36)
+    await waitFor("document.querySelector('[role=tab]').getAttribute('aria-selected') === 'true' && document.activeElement === document.querySelector('[role=tab]')")
+    assert.ok(await evaluate("Array.from(document.querySelectorAll('[role=tab]')).every(tab => { const panel = document.getElementById(tab.getAttribute('aria-controls')); return !!panel && (getComputedStyle(panel).display !== 'none') === (tab.getAttribute('aria-selected') === 'true') })"), 'Tab panel visibility mismatch')
+  },
+  'learning-slider': async page => {
+    const applied = await evaluate("const input = document.querySelector('.learning-slider input'); input.value = input.min; input.dispatchEvent(new Event('input', { bubbles: true })); input.value")
+    const expected = await evaluate("document.querySelector('.learning-slider input').min")
+    assert.equal(applied, expected, `Slider input not applied: ${page}`)
+  },
+  'learning-counter': async () => {
+    // 动画可能因联动探针刚被重新触发，等待落定而非瞬时断言
+    await waitFor("document.querySelector('.learning-counter').getAttribute('aria-label').endsWith(document.querySelector('.learning-counter__number').textContent)")
+  },
+  'learning-flip': async page => {
+    await evaluate("document.querySelector('.learning-flip__toggle').focus()")
+    await key('Enter', 'Enter', 13)
+    await waitFor("document.querySelector('.learning-flip__toggle').getAttribute('aria-pressed') === 'true'")
+    assert.equal(await evaluate("document.querySelector('.learning-flip__back').getAttribute('aria-hidden')"), 'false')
+    await evaluate("document.querySelector('.learning-flip__toggle').click()")
+    await waitFor("document.querySelector('.learning-flip__toggle').getAttribute('aria-pressed') === 'false'")
+  },
+  'learning-quiz': async page => {
+    const optionCount = await evaluate("document.querySelectorAll('.learning-quiz__option input').length")
+    assert.ok(optionCount >= 2, `Quiz needs at least two options: ${page}`)
+    for (let index = 0; index < optionCount; index++) {
+      await evaluate(`document.querySelectorAll('.learning-quiz__option input')[${index}].click()`)
+      if (await evaluate("document.querySelector('.learning-quiz').dataset.state === 'correct'")) break
+    }
+    await waitFor("document.querySelector('.learning-quiz')?.dataset.state === 'correct'")
+    assert.ok(await evaluate("document.querySelector('.learning-quiz__feedback').textContent.trim().length > 0"), `Quiz feedback missing: ${page}`)
+  },
+  'learning-steps': async page => {
+    const dotCount = await evaluate("document.querySelectorAll('.learning-steps__dot').length")
+    assert.ok(dotCount >= 2, `Steps need at least two stages: ${page}`)
+    const first = await evaluate("document.querySelector('.learning-steps').dataset.step")
+    assert.ok(await evaluate("document.querySelectorAll('.learning-steps__nav button')[0].disabled"), `Steps prev must start disabled: ${page}`)
+    await evaluate("document.querySelectorAll('.learning-steps__nav button')[1].click()")
+    await waitFor(`document.querySelector('.learning-steps').dataset.step !== ${JSON.stringify(first)}`)
+    await evaluate("document.querySelector('.learning-steps__dot').click()")
+    await waitFor(`document.querySelector('.learning-steps').dataset.step === ${JSON.stringify(first)}`)
+  },
+  'learning-popover': async () => {
+    await evaluate("document.querySelector('.learning-popover__trigger').click()")
+    await waitFor("document.querySelector('.learning-popover__trigger').getAttribute('aria-expanded') === 'true' && !!document.querySelector('.learning-popover__card')")
+    await key('Escape', 'Escape', 27)
+    await waitFor("!document.querySelector('.learning-popover__card')")
+  },
+}
+
 try {
   const endpoint = await new Promise((resolve, reject) => {
     let output = ''
@@ -683,22 +772,27 @@ try {
     await command('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: true, flatten: true })
   }
   await navigate(base, '.feature-gallery')
+  // 专题必须可从导航进入；feature-gallery 卡片是精选位而非硬性入口，有则测、无则直接导航进入
   const homeLink = await evaluate(`document.querySelector('.feature-gallery a[href="${sectionUrl.pathname}"]')?.href`)
-  assert.equal(homeLink, sectionUrl.href, 'Missing homepage topic card')
+  const hasCard = homeLink === sectionUrl.href
+  if (!hasCard) console.log(`INFO ${section}: no feature-gallery card; entering via navigation`)
   assert.ok(await evaluate(`!!document.querySelector('.VPNav a[href="${sectionUrl.pathname}"]')`), 'Missing topic navigation')
   await checkOverflow(DESKTOP_WIDTH)
-  await evaluate(`document.querySelector('.feature-gallery a[href="${sectionUrl.pathname}"]').focus()`)
-  assert.notEqual(await evaluate("getComputedStyle(document.activeElement).outlineStyle"), 'none', 'Missing homepage focus indicator')
-  await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] })
-  const cardCenter = await evaluate(`const rect = document.querySelector('.feature-gallery a[href="${sectionUrl.pathname}"]').getBoundingClientRect(); ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 })`)
-  await command('Input.dispatchMouseEvent', { type: 'mouseMoved', ...cardCenter })
-  await delay(POLL_MS)
-  assert.equal(await evaluate(`getComputedStyle(document.querySelector('.feature-gallery a[href="${sectionUrl.pathname}"]')).animationName`), 'none', 'Homepage hover ignores reduced motion')
-  await command('Emulation.setEmulatedMedia', { features: [] })
-  await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 0, y: 0 })
+  if (hasCard) {
+    await evaluate(`document.querySelector('.feature-gallery a[href="${sectionUrl.pathname}"]').focus()`)
+    assert.notEqual(await evaluate("getComputedStyle(document.activeElement).outlineStyle"), 'none', 'Missing homepage focus indicator')
+    await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] })
+    const cardCenter = await evaluate(`const rect = document.querySelector('.feature-gallery a[href="${sectionUrl.pathname}"]').getBoundingClientRect(); ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 })`)
+    await command('Input.dispatchMouseEvent', { type: 'mouseMoved', ...cardCenter })
+    await delay(POLL_MS)
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('.feature-gallery a[href="${sectionUrl.pathname}"]')).animationName`), 'none', 'Homepage hover ignores reduced motion')
+    await command('Emulation.setEmulatedMedia', { features: [] })
+    await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 0, y: 0 })
+  }
   await checkOverflow(MOBILE_WIDTH)
   if (section === 'algorithm' || section === 'frontend') await assertNoSandboxWorker('Homepage')
-  await evaluate(`document.querySelector('.feature-gallery a[href="${sectionUrl.pathname}"]').click()`)
+  if (hasCard) await evaluate(`document.querySelector('.feature-gallery a[href="${sectionUrl.pathname}"]').click()`)
+  else await navigate(sectionUrl, '.vp-doc h1')
   let pages
   if (section === 'algorithm') {
     pages = await verifyAlgorithm()
@@ -707,50 +801,63 @@ try {
     await verifyFrontendArticle()
     pages = [sectionUrl.href, new URL('frontend/algorithm-sandbox.html', base).href]
   } else {
-    await waitFor(`location.pathname === ${JSON.stringify(sectionUrl.pathname)} && !!document.querySelector('.learning-slider input')`)
-    pages = await evaluate(`Array.from(new Set([location.href, ...Array.from(document.querySelectorAll('.VPSidebar a[href]'), a => a.href).filter(href => new URL(href).pathname.startsWith(${JSON.stringify(sectionUrl.pathname)}))]))`)
+    // 通用分支：侧边栏发现章节页，自动发现页面上所有 learning-* 组件根节点
+    // （按 BEM 约定，根 class 以 learning- 开头且不含 __）。注册了专属探针的组件
+    // 跑对应检查，未注册的仅跑通用断言并打印提示；滑块↔计数联动仅在两者共存时断言。
+    await waitFor(`location.pathname === ${JSON.stringify(sectionUrl.pathname)} && !!document.querySelector('.vp-doc h1')`)
+    const collectSidebar = `Array.from(document.querySelectorAll('.VPSidebar a[href]'), a => a.href).filter(href => new URL(href).pathname.startsWith(${JSON.stringify(sectionUrl.pathname)}))`
+    pages = await evaluate(`Array.from(new Set([location.href, ...${collectSidebar}]))`)
     assert.ok(pages.length >= 2, 'No chapter links found in sidebar')
+    // 子目录索引（路径以 / 结尾）可有专属侧边栏：跟随发现并合并其子页，限一层
+    for (const indexPage of pages.slice(1)) {
+      if (!new URL(indexPage).pathname.endsWith('/')) continue
+      await navigate(indexPage, '.vp-doc h1')
+      pages.push(...await evaluate(collectSidebar))
+    }
+    pages = [...new Set(pages)]
     for (const page of pages) {
-      await navigate(page, '.learning-slider input')
+      await navigate(page, '.vp-doc h1')
       await delay(ANIMATION_MS)
-      assert.ok(await evaluate("['.learning-tabs', '.learning-slider', '.learning-counter', '.learning-flip'].every(selector => document.querySelector(selector))"), `Missing interaction type: ${page}`)
-      await evaluate("const input = document.querySelector('.learning-slider input'); input.value = input.min; input.dispatchEvent(new Event('input', { bubbles: true }))")
-      await delay(ANIMATION_MS)
-      const before = await evaluate("document.querySelector('.learning-counter').getAttribute('aria-label')")
-      await evaluate("const input = document.querySelector('.learning-slider input'); input.value = input.max; input.dispatchEvent(new Event('input', { bubbles: true }))")
-      await delay(ANIMATION_MS)
-      const after = await evaluate("document.querySelector('.learning-counter').getAttribute('aria-label')")
-      assert.notEqual(before, after, `Slider/counter not linked: ${page}`)
-      assert.ok(await evaluate("document.querySelector('.learning-counter').getAttribute('aria-label').endsWith(document.querySelector('.learning-counter__number').textContent)"), 'Counter did not settle on target')
-      await evaluate("document.querySelectorAll('[role=tab]')[1].click()")
-      await waitFor("document.querySelectorAll('[role=tab]')[1].getAttribute('aria-selected') === 'true'")
-      await evaluate("document.querySelectorAll('[role=tab]')[1].focus()")
-      await command('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Home', code: 'Home', windowsVirtualKeyCode: 36 })
-      await command('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Home', code: 'Home', windowsVirtualKeyCode: 36 })
-      await waitFor("document.querySelector('[role=tab]').getAttribute('aria-selected') === 'true' && document.activeElement === document.querySelector('[role=tab]')")
-      assert.ok(await evaluate("Array.from(document.querySelectorAll('[role=tab]')).every(tab => { const panel = document.getElementById(tab.getAttribute('aria-controls')); return !!panel && (getComputedStyle(panel).display !== 'none') === (tab.getAttribute('aria-selected') === 'true') })"), 'Tab panel visibility mismatch')
-      await evaluate("document.querySelector('.learning-flip__toggle').focus()")
-      await command('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r', unmodifiedText: '\r' })
-      await command('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 })
-      await waitFor("document.querySelector('.learning-flip__toggle').getAttribute('aria-pressed') === 'true'")
-      assert.equal(await evaluate("document.querySelector('.learning-flip__back').getAttribute('aria-hidden')"), 'false')
-      await evaluate("document.querySelector('.learning-flip__toggle').click()")
-      await waitFor("document.querySelector('.learning-flip__toggle').getAttribute('aria-pressed') === 'false'")
+      const found = await evaluate(`Array.from(new Set(Array.from(document.querySelectorAll('[class*="learning-"]')).flatMap(node => Array.from(node.classList)).filter(name => name.startsWith('learning-') && !name.includes('__'))))`)
+      const has = name => found.includes(name)
+      const pathname = new URL(page).pathname
+      if (!found.length) console.log(`INFO ${pathname}: no Learning components detected; generic checks only`)
+      if (has('learning-slider') && has('learning-counter')) {
+        await evaluate("const input = document.querySelector('.learning-slider input'); input.value = input.min; input.dispatchEvent(new Event('input', { bubbles: true }))")
+        await delay(ANIMATION_MS)
+        const before = await evaluate("document.querySelector('.learning-counter').getAttribute('aria-label')")
+        await evaluate("const input = document.querySelector('.learning-slider input'); input.value = input.max; input.dispatchEvent(new Event('input', { bubbles: true }))")
+        await delay(ANIMATION_MS)
+        const after = await evaluate("document.querySelector('.learning-counter').getAttribute('aria-label')")
+        assert.notEqual(before, after, `Slider/counter not linked: ${page}`)
+        assert.ok(await evaluate("document.querySelector('.learning-counter').getAttribute('aria-label').endsWith(document.querySelector('.learning-counter__number').textContent)"), 'Counter did not settle on target')
+      }
+      const probed = []
+      for (const name of found) {
+        const probe = COMPONENT_PROBES[name]
+        if (probe) {
+          await probe(page)
+          probed.push(name)
+        } else console.log(`INFO ${pathname}: ${name} detected without dedicated probe`)
+      }
       await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] })
       await delay(POLL_MS)
-      await evaluate("const input = document.querySelector('.learning-slider input'); input.value = input.min; input.dispatchEvent(new Event('input', { bubbles: true }))")
-      await delay(POLL_MS)
-      assert.ok(await evaluate("document.querySelector('.learning-counter').getAttribute('aria-label').endsWith(document.querySelector('.learning-counter__number').textContent)"), 'Reduced-motion counter did not settle immediately')
-      assert.equal(await evaluate("getComputedStyle(document.querySelector('.learning-flip__inner')).transitionDuration"), '0s')
+      if (has('learning-slider') && has('learning-counter')) {
+        await evaluate("const input = document.querySelector('.learning-slider input'); input.value = input.min; input.dispatchEvent(new Event('input', { bubbles: true }))")
+        await delay(POLL_MS)
+        assert.ok(await evaluate("document.querySelector('.learning-counter').getAttribute('aria-label').endsWith(document.querySelector('.learning-counter__number').textContent)"), 'Reduced-motion counter did not settle immediately')
+      }
+      if (has('learning-flip')) assert.equal(await evaluate("getComputedStyle(document.querySelector('.learning-flip__inner')).transitionDuration"), '0s')
       await command('Emulation.setEmulatedMedia', { features: [] })
       await checkOverflow(DESKTOP_WIDTH)
       await checkOverflow(MOBILE_WIDTH)
       await evaluate("document.documentElement.classList.add('dark')")
       await checkOverflow(MOBILE_WIDTH)
-      const dark = await evaluate("({ background: getComputedStyle(document.querySelector('.learning-flip__front')).backgroundColor, text: getComputedStyle(document.querySelector('.learning-flip__front')).color })")
+      const darkTarget = has('learning-flip') ? '.learning-flip__front' : 'body'
+      const dark = await evaluate(`({ background: getComputedStyle(document.querySelector(${JSON.stringify(darkTarget)})).backgroundColor, text: getComputedStyle(document.querySelector(${JSON.stringify(darkTarget)})).color })`)
       assert.notEqual(dark.background, dark.text, 'Identical foreground/background in dark mode')
       await evaluate("document.documentElement.classList.remove('dark')")
-      console.log(`PASS ${new URL(page).pathname}: interactions, keyboard, responsive, dark, reduced motion`)
+      console.log(`PASS ${pathname}: ${found.length ? `${found.length} components detected, ${probed.length} probed` : 'generic checks only'}, keyboard, responsive, dark, reduced motion`)
     }
   }
   const regression = new URL('frontend/vue-basics.html', base)
@@ -758,7 +865,7 @@ try {
   await navigate(regression, '.vp-doc h1')
   if (section === 'algorithm' || section === 'frontend') await assertNoSandboxWorker('Existing Vue article', regressionResponseStart)
   assert.equal(errors.length, 0, `Browser errors/warnings: ${JSON.stringify(errors)}`)
-  console.log(`PASS homepage card, ${pages.length} topic pages, existing article, zero browser errors/warnings`)
+  console.log(`PASS ${hasCard ? 'homepage card' : 'navigation entry'}, ${pages.length} topic pages, existing article, zero browser errors/warnings`)
 } finally {
   for (const request of pending.values()) clearTimeout(request.timeout)
   if (socket?.readyState === WebSocket.OPEN) {
@@ -768,5 +875,6 @@ try {
   await Promise.race([exited, delay(2000)])
   if (browser.exitCode === null) browser.kill()
   await Promise.race([exited, delay(2000)])
+  if (preview && preview.exitCode === null) preview.kill()
   await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
 }
