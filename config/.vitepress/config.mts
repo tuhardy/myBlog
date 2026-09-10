@@ -175,6 +175,31 @@ export default defineConfig({
           items: [
             { text: '📝 笔记总览',       link: '/notes/' },
             { text: 'Markdown 教程',     link: '/notes/markdown-tutorial/' },
+            { text: '互动组件',          link: '/notes/learning-components/' },
+          ],
+        },
+      ],
+
+      // ----- 互动组件（子目录）-----
+      '/notes/learning-components/': [
+        {
+          text: '📝 笔记总览',
+          items: [
+            { text: '← 返回笔记总览',    link: '/notes/' },
+            { text: '组件总览',          link: '/notes/learning-components/' },
+          ],
+        },
+        {
+          text: '互动组件',
+          items: [
+            { text: 'Tabs',       link: '/notes/learning-components/tabs' },
+            { text: 'Slider',     link: '/notes/learning-components/slider' },
+            { text: 'Counter',    link: '/notes/learning-components/counter' },
+            { text: 'Steps',      link: '/notes/learning-components/steps' },
+            { text: 'FlipCard',   link: '/notes/learning-components/flip-card' },
+            { text: 'Quiz',       link: '/notes/learning-components/quiz' },
+            { text: 'Popover',    link: '/notes/learning-components/popover' },
+            // components:end（new-component.mjs 在此前插入新组件链接）
           ],
         },
       ],
