@@ -132,7 +132,7 @@ export default defineConfig({
           items: [
             { text: '索引底层原理',      link: '/database/mysql/indexing' },
             { text: '事务 ACID 与 MVCC', link: '/database/mysql/transaction' },
-            { text: 'SQL 优化与慢查询',  link: '/database/mysql/optimize' },
+            { text: '慢 SQL 排查实战',   link: '/database/mysql/optimize' },
           ],
         },
       ],

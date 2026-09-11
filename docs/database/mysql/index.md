@@ -13,7 +13,7 @@ layout: doc
 
   * [MySQL 索引底层原理](./indexing.md)
   * [事务 ACID 与 MVCC](./transaction.md)
-  * [SQL 优化与慢查询排查](./optimize.md)
+  * [慢 SQL 排查实战：从告警到验证](./optimize.md)
 
 ::: details 阅读建议
 先搞懂索引（B+ 树、回表、覆盖索引、最左前缀），

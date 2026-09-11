@@ -45,6 +45,7 @@ function go(next: number) {
 <style scoped>
 .learning-steps { padding: 20px; margin: 20px 0; border: 1px solid var(--vp-c-divider); border-radius: 12px; background: var(--vp-c-bg-soft); }
 .learning-steps__dots { display: flex; flex-wrap: wrap; gap: 10px; padding: 0; margin: 0 0 16px; list-style: none; }
+.learning-steps__dots > li { margin-top: 0; }
 .learning-steps__dot { width: 36px; height: 36px; border: 1px solid var(--vp-c-divider); border-radius: 50%; background: var(--vp-c-bg); color: var(--vp-c-text-2); font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; }
 .learning-steps__dot[aria-current='step'] { border-color: var(--vp-c-brand-1); background: var(--vp-c-brand-1); color: var(--vp-c-bg); font-weight: 700; }
 .learning-steps__dot:focus-visible { outline: 2px solid var(--vp-c-brand-1); outline-offset: 2px; }
