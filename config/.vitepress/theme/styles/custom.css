@@ -45,6 +45,44 @@ html.dark {
 html {
   scroll-behavior: smooth;
 }
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* ===== 纸张噪点：全局极淡颗粒层，强化杂志纸感 =====
+ * SVG feTurbulence 生成灰度噪点，fixed 覆于内容之上（z-index 高于 .VPContent 的 1，
+ * 低于导航栏），pointer-events 关闭不影响交互；暗色模式再降一档避免发灰。
+ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  opacity: 0.05;
+}
+html.dark body::before {
+  opacity: 0.04;
+}
+
+/* ===== v-reveal：滚动进入视口 fade-up =====
+ * class 生命周期由 theme/index.ts 的指令管理：先加 reveal-init 隐藏，
+ * 入视口后加 reveal-in 触发过渡，结束即移除两个 class 归还元素自身 transition。
+ */
+.reveal-init {
+  opacity: 0;
+  transform: translateY(22px);
+}
+.reveal-in {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.6s ease var(--reveal-delay, 0ms),
+    transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) var(--reveal-delay, 0ms);
+}
 
 /* ===== 首页文章区标题：mono 编号 + 中文标题 + 延展 hairline =====
  * 编号 03 直接写在 index.md 的 markup 中（与 01/02 集中维护），
@@ -53,9 +91,31 @@ html {
  * 避免容器嵌套导致的 gutter 双层叠加。
  */
 .post-list-wrap {
+  position: relative;
   margin: 0 auto;
   padding: 8px 0 96px;
   scroll-margin-top: 80px;
+}
+
+/* 区块大水印：右上超大 mono 序号，与「03 — LATEST POSTS」小标呼应 */
+.post-list-wrap::before {
+  content: "03";
+  position: absolute;
+  top: -36px;
+  right: 0;
+  z-index: -1;
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas,
+    'Liberation Mono', monospace;
+  font-size: clamp(120px, 16vw, 200px);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--vp-c-brand-1);
+  opacity: 0.05;
+  pointer-events: none;
+}
+html.dark .post-list-wrap::before {
+  opacity: 0.08;
 }
 .post-list-wrap > h2 {
   border-top: 0 !important;

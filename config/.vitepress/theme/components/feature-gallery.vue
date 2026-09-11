@@ -55,7 +55,7 @@ const features: GalleryFeature[] = [
 <template>
   <section id="gallery" class="feature-gallery">
     <p class="mag-mono feature-gallery__kicker">02 — EXPLORE</p>
-    <h2 class="feature-gallery__heading">
+    <h2 v-reveal class="feature-gallery__heading">
       内容导览
       <span class="feature-gallery__rule" aria-hidden="true" />
     </h2>
@@ -64,6 +64,7 @@ const features: GalleryFeature[] = [
       <a
         v-for="(f, i) in features"
         :key="f.title"
+        v-reveal="i"
         class="mag-card"
         :href="withBase(f.link)"
       >
@@ -81,9 +82,31 @@ const features: GalleryFeature[] = [
 
 <style scoped>
 .feature-gallery {
+  position: relative;
   margin: 0 auto;
   padding: 16px 0 88px;
   scroll-margin-top: 80px;
+}
+
+/* 区块大水印：右上超大 mono「02」，与 kicker 小标呼应 */
+.feature-gallery::before {
+  content: "02";
+  position: absolute;
+  top: -52px;
+  right: 0;
+  z-index: -1;
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas,
+    'Liberation Mono', monospace;
+  font-size: clamp(120px, 16vw, 200px);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--vp-c-brand-1);
+  opacity: 0.05;
+  pointer-events: none;
+}
+.dark .feature-gallery::before {
+  opacity: 0.08;
 }
 
 .feature-gallery__kicker {

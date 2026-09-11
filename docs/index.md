@@ -26,7 +26,7 @@ const toHref = (path) => BASE + String(path || '').replace(/^\//, '')
 ## <span class="mag-mono post-list__num">03 — LATEST POSTS</span><span class="home-section-title">最新文章</span>
 
 <ul class="post-list">
-  <li v-for="(p, i) in latestPosts" :key="p.link">
+  <li v-for="(p, i) in latestPosts" :key="p.link" v-reveal="i">
     <span class="post-no" aria-hidden="true">{{ String(i + 1).padStart(2, '0') }}</span>
     <div class="post-meta">
       <span class="post-tag">#{{ p.category }}</span>
@@ -38,7 +38,7 @@ const toHref = (path) => BASE + String(path || '').replace(/^\//, '')
       <a class="read-more" :href="toHref(p.link)">继续阅读 →</a>
     </div>
   </li>
-  <li v-if="!latestPosts || latestPosts.length === 0">
+  <li v-if="!latestPosts || latestPosts.length === 0" v-reveal>
     <span class="post-no" aria-hidden="true">01</span>
     <div class="post-meta">
       <span class="post-tag">#随笔</span>

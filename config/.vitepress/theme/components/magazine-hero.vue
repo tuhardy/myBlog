@@ -12,7 +12,7 @@
  * 数据通过 props 传入（由 docs/index.md 引入 stats.data 构建期数据），
  * 避免主题目录（srcDir 外）无法消费 data loader 的 SSR 限制。
  */
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { withBase } from 'vitepress'
 
 interface SiteStats {
@@ -23,9 +23,75 @@ interface SiteStats {
 const props = defineProps<{ stats: SiteStats }>()
 
 const avatarSrc = withBase('/avatar.jpg')
-const total = computed(() => String(props.stats?.total ?? 0).padStart(2, '0'))
-const categories = computed(() => String(props.stats?.categories ?? 0).padStart(2, '0'))
+const pad2 = (n: number) => String(n).padStart(2, '0')
+const total = computed(() => pad2(props.stats?.total ?? 0))
+const categories = computed(() => pad2(props.stats?.categories ?? 0))
 const latest = computed(() => props.stats?.latestLabel ?? '—')
+
+// ===== 数字滚动：SSR 直接渲染真实值，挂载后从 00 count-up =====
+const displayTotal = ref(total.value)
+const displayCategories = ref(categories.value)
+
+const COUNTUP_DELAY = 520 // 与数据条入场动画（约 430ms 延迟）对齐
+const COUNTUP_DURATION = 900
+let countRaf = 0
+let countTid = 0
+
+// ===== 拍立得 3D 视差：JS 写 --p-rx/--p-ry，CSS transition 自带惯性感 =====
+const figureRef = ref<HTMLElement | null>(null)
+const polaroidRef = ref<HTMLElement | null>(null)
+const TILT_X = 6 // 最大俯仰角（度）
+const TILT_Y = 7 // 最大偏转角（度）
+
+function onFigureMove(e: PointerEvent) {
+  const fig = figureRef.value
+  const card = polaroidRef.value
+  if (!fig || !card) return
+  const rect = fig.getBoundingClientRect()
+  const px = (e.clientX - rect.left) / rect.width - 0.5
+  const py = (e.clientY - rect.top) / rect.height - 0.5
+  card.style.setProperty('--p-ry', `${(px * TILT_Y).toFixed(2)}deg`)
+  card.style.setProperty('--p-rx', `${(-py * TILT_X).toFixed(2)}deg`)
+}
+function onFigureLeave() {
+  polaroidRef.value?.style.setProperty('--p-rx', '0deg')
+  polaroidRef.value?.style.setProperty('--p-ry', '0deg')
+}
+
+onMounted(() => {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (reduced) return
+
+  // count-up：延迟到数据条入场后开始，结束时保证落在真实值
+  countTid = window.setTimeout(() => {
+    const targetTotal = props.stats?.total ?? 0
+    const targetCats = props.stats?.categories ?? 0
+    const t0 = performance.now()
+    const step = (t: number) => {
+      const p = Math.min(1, (t - t0) / COUNTUP_DURATION)
+      const e = 1 - Math.pow(1 - p, 3)
+      displayTotal.value = pad2(Math.round(targetTotal * e))
+      displayCategories.value = pad2(Math.round(targetCats * e))
+      if (p < 1) countRaf = requestAnimationFrame(step)
+    }
+    displayTotal.value = '00'
+    displayCategories.value = '00'
+    countRaf = requestAnimationFrame(step)
+  }, COUNTUP_DELAY)
+
+  // 视差倾斜仅对精确指针（鼠标）启用，触屏跳过
+  if (window.matchMedia('(pointer: fine)').matches) {
+    figureRef.value?.addEventListener('pointermove', onFigureMove, { passive: true })
+    figureRef.value?.addEventListener('pointerleave', onFigureLeave)
+  }
+})
+
+onBeforeUnmount(() => {
+  window.clearTimeout(countTid)
+  cancelAnimationFrame(countRaf)
+  figureRef.value?.removeEventListener('pointermove', onFigureMove)
+  figureRef.value?.removeEventListener('pointerleave', onFigureLeave)
+})
 </script>
 
 <template>
@@ -57,11 +123,11 @@ const latest = computed(() => props.stats?.latestLabel ?? '—')
         <dl class="mag-stats">
           <div class="mag-stats__item">
             <dt class="mag-mono">文章 / POSTS</dt>
-            <dd>{{ total }}<small>&nbsp;篇</small></dd>
+            <dd>{{ displayTotal }}<small>&nbsp;篇</small></dd>
           </div>
           <div class="mag-stats__item">
             <dt class="mag-mono">栏目 / SECTIONS</dt>
-            <dd>{{ categories }}<small>&nbsp;个</small></dd>
+            <dd>{{ displayCategories }}<small>&nbsp;个</small></dd>
           </div>
           <div class="mag-stats__item">
             <dt class="mag-mono">最近更新 / LATEST</dt>
@@ -71,8 +137,8 @@ const latest = computed(() => props.stats?.latestLabel ?? '—')
       </div>
 
       <!-- 右栏：拍立得相片风肖像 -->
-      <figure class="mag-hero__figure">
-        <div class="mag-hero__polaroid">
+      <figure ref="figureRef" class="mag-hero__figure">
+        <div ref="polaroidRef" class="mag-hero__polaroid">
           <div class="mag-hero__portrait">
             <img :src="avatarSrc" alt="博主头像" />
           </div>
@@ -90,6 +156,38 @@ const latest = computed(() => props.stats?.latestLabel ?? '—')
 .mag-hero {
   margin: 0 auto;
   padding: 40px 0 48px;
+}
+
+/* ===== 入场动画：各元素错峰 fade-up =====
+ * 用独立的 translate 属性而非 transform，避免与拍立得的 hover/视差 transform 冲突；
+ * backwards 填充只在延迟期间套用 from 态，动画结束即归还元素自身样式。
+ */
+@keyframes hero-in {
+  from {
+    opacity: 0;
+    translate: 0 20px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mag-hero__masthead,
+  .mag-hero__kicker,
+  .mag-hero__title,
+  .mag-hero__desc,
+  .mag-hero__actions,
+  .mag-stats,
+  .mag-hero__figure {
+    animation: hero-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  }
+  .mag-hero__kicker { animation-delay: 90ms; }
+  .mag-hero__title { animation-delay: 170ms; }
+  .mag-hero__desc { animation-delay: 250ms; }
+  .mag-hero__actions { animation-delay: 330ms; }
+  .mag-stats { animation-delay: 430ms; }
+  .mag-hero__figure { animation-delay: 240ms; }
 }
 
 /* ===== 刊头：上下 hairline 包夹的 mono 信息行 ===== */
@@ -137,6 +235,11 @@ const latest = computed(() => props.stats?.latestLabel ?? '—')
   display: block;
   color: transparent;
   -webkit-text-stroke: 1.5px var(--vp-c-brand-1);
+  transition: color 0.35s ease;
+}
+/* 悬停大标题时，描边空心字填回品牌色 */
+.mag-hero__title:hover .mag-hero__title-stroke {
+  color: var(--vp-c-brand-1);
 }
 
 .mag-hero__desc {
@@ -237,15 +340,41 @@ const latest = computed(() => props.stats?.latestLabel ?? '—')
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.06),
     0 12px 32px rgba(44, 62, 80, 0.12);
-  transform: rotate(-2deg);
+  /* 倾斜/旋转/抬升拆为 CSS 变量：JS 视差写 --p-rx/--p-ry，hover 写 --p-rot/--p-lift，
+     0.5s 过渡兼作视差的惯性平滑 */
+  transform:
+    rotate(var(--p-rot, -2deg))
+    rotateX(var(--p-rx, 0deg))
+    rotateY(var(--p-ry, 0deg))
+    translateY(var(--p-lift, 0px));
   transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
     box-shadow 0.5s ease;
 }
 .mag-hero__polaroid:hover {
-  transform: rotate(0deg) translateY(-4px);
+  --p-rot: 0deg;
+  --p-lift: -4px;
   box-shadow:
     0 2px 4px rgba(0, 0, 0, 0.08),
     0 20px 48px rgba(44, 62, 80, 0.18);
+}
+/* 顶部半透明「胶带」：把拍立得「贴」在页面上 */
+.mag-hero__polaroid::after {
+  content: "";
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  width: 118px;
+  height: 30px;
+  transform: translateX(-50%) rotate(-2.5deg);
+  background: rgba(165, 180, 200, 0.34);
+  border-left: 1px dashed rgba(255, 255, 255, 0.5);
+  border-right: 1px dashed rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  pointer-events: none;
+}
+.dark .mag-hero__polaroid::after {
+  background: rgba(143, 168, 200, 0.2);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 .mag-hero__portrait {
   position: relative;

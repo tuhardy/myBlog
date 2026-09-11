@@ -18,6 +18,7 @@ import DefaultTheme from 'vitepress/theme'
 import GlowParticle from '../components/glow-particle.vue'
 import ProgressBreath from '../components/progress-breath.vue'
 import ContextEmoji from '../components/context-emoji.vue'
+import BackTop from '../components/back-top.vue'
 
 const { Layout: DefaultLayout } = DefaultTheme
 </script>
@@ -29,6 +30,7 @@ const { Layout: DefaultLayout } = DefaultTheme
       <ClientOnly>
         <ProgressBreath />
         <GlowParticle />
+        <BackTop />
       </ClientOnly>
     </template>
 

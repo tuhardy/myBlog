@@ -26,11 +26,60 @@ const originalEnhanceApp = DefaultTheme.enhanceApp
 const NAV_THRESHOLD = 80
 const SETUP_RETRIES = 60 // 60 帧 ≈ 1s 超时
 
+// ===== v-reveal：滚动进入视口时逐项 fade-up =====
+// 用法：v-reveal 或 v-reveal="i"（i 为错峰下标，每项 +REVEAL_STAGGER ms）
+// 注意：不用 transition 终态方案——reveal 过渡完成后移除两个 class，
+// 把 transition 属性还给元素自身（如文章卡 hover 抬升），避免互相覆盖。
+const REVEAL_STAGGER = 70
+const REVEAL_DURATION = 700 // 需 ≥ custom.css 中 transition 时长 + 最大错峰
+
+const revealTimers = new WeakMap<HTMLElement, { io?: IntersectionObserver; tid?: number }>()
+
+const revealDirective = {
+  // SSR 渲染为空操作：隐藏态完全由客户端 mounted 时加 class 实现，避免 SSR 报错
+  getSSRProps: () => ({}),
+  mounted(el: HTMLElement, binding: { value?: unknown }) {
+    const idx = typeof binding.value === 'number' ? binding.value : 0
+    const delay = Math.min(Math.max(idx, 0), 10) * REVEAL_STAGGER
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    el.classList.add('reveal-init')
+    el.style.setProperty('--reveal-delay', `${delay}ms`)
+
+    const state: { io?: IntersectionObserver; tid?: number } = {}
+    revealTimers.set(el, state)
+
+    state.io = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return
+        state.io?.disconnect()
+        el.classList.add('reveal-in')
+        // 过渡结束后移除 class，恢复元素自身的 transition 定义
+        state.tid = window.setTimeout(() => {
+          el.classList.remove('reveal-init', 'reveal-in')
+          el.style.removeProperty('--reveal-delay')
+        }, delay + REVEAL_DURATION)
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -24px' },
+    )
+    state.io.observe(el)
+  },
+  unmounted(el: HTMLElement) {
+    const state = revealTimers.get(el)
+    state?.io?.disconnect()
+    if (state?.tid) window.clearTimeout(state.tid)
+    revealTimers.delete(el)
+  },
+}
+
 export default {
   ...DefaultTheme,
   Layout,
   async enhanceApp(ctx: EnhanceAppContext) {
     await originalEnhanceApp?.(ctx)
+    // 指令注册需在 SSR 也可达，SSR 阶段经 getSSRProps 退化为无属性输出
+    ctx.app.directive('reveal', revealDirective)
     if (typeof window === 'undefined') return
 
     let tries = 0
