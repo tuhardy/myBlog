@@ -716,6 +716,48 @@ const COMPONENT_PROBES = {
     await key('Escape', 'Escape', 27)
     await waitFor("!document.querySelector('.learning-popover__card')")
   },
+  'learning-terminal': async page => {
+    const lineCount = "document.querySelectorAll('.learning-terminal__line').length"
+    // 演示模式：下一条推进剧本，上一条随之解禁
+    const before = await evaluate(lineCount)
+    await evaluate("Array.from(document.querySelectorAll('.learning-terminal__controls button')).find(b => b.textContent.includes('下一条')).click()")
+    await waitFor(`${lineCount} > ${before}`)
+    assert.ok(await evaluate("!Array.from(document.querySelectorAll('.learning-terminal__controls button')).find(b => b.textContent.includes('上一条')).disabled"), `Terminal prev must unlock after advancing: ${page}`)
+    // 动手敲模式：错误命令两次未命中后出现提示与「帮我填入」
+    await evaluate("Array.from(document.querySelectorAll('.learning-terminal__modes button')).find(b => b.textContent.includes('动手敲')).click()")
+    await waitFor("document.querySelector('.learning-terminal').dataset.mode === 'type'")
+    const typeWrong = "const input = document.querySelector('.learning-terminal__entry input'); input.value = 'probe-wrong-cmd'; input.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('.learning-terminal__entry').requestSubmit()"
+    await evaluate(typeWrong)
+    await evaluate(typeWrong)
+    await waitFor("!!document.querySelector('.learning-terminal__feedback button')")
+    // 一键填入期望命令，改写为小写后回车：大小写差异应不影响命中，剧本继续推进
+    const mid = await evaluate(lineCount)
+    await evaluate("document.querySelector('.learning-terminal__feedback button').click()")
+    await evaluate("const input = document.querySelector('.learning-terminal__entry input'); input.value = input.value.toLowerCase(); input.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('.learning-terminal__entry').requestSubmit()")
+    await waitFor(`${lineCount} > ${mid}`)
+    assert.ok(await evaluate("!document.querySelector('.learning-terminal__entry input').value"), `Terminal input not cleared after correct submit: ${page}`)
+  },
+  'learning-stepper': async page => {
+    const first = await evaluate("document.querySelector('.learning-stepper').dataset.step")
+    assert.ok(await evaluate("document.querySelectorAll('.learning-stepper__nav button')[0].disabled"), `Stepper prev must start disabled: ${page}`)
+    assert.ok(await evaluate("document.querySelectorAll('.learning-stepper__line.is-active').length >= 1"), `Stepper needs at least one active line: ${page}`)
+    await evaluate("document.querySelectorAll('.learning-stepper__nav button')[1].click()")
+    await waitFor(`document.querySelector('.learning-stepper').dataset.step !== ${JSON.stringify(first)}`)
+    assert.ok(await evaluate("document.querySelectorAll('.learning-stepper__line.is-active').length >= 1"), `Stepper lost active line after advancing: ${page}`)
+    await evaluate("document.querySelectorAll('.learning-stepper__nav button')[0].click()")
+    await waitFor(`document.querySelector('.learning-stepper').dataset.step === ${JSON.stringify(first)}`)
+  },
+  'learning-hotspot': async page => {
+    const regionCount = await evaluate("document.querySelectorAll('.learning-hotspot__region').length")
+    assert.ok(regionCount >= 1, `Hotspot needs at least one region: ${page}`)
+    await evaluate("document.querySelectorAll('.learning-hotspot__region')[0].click()")
+    await waitFor("document.querySelector('.learning-hotspot').dataset.active !== '-1'")
+    assert.ok(await evaluate("!!document.querySelector('.learning-hotspot__caption strong')"), `Hotspot caption missing after activation: ${page}`)
+    // 焦点留在区域上时 Esc 应收起注解
+    await evaluate("document.querySelectorAll('.learning-hotspot__region')[0].focus()")
+    await key('Escape', 'Escape', 27)
+    await waitFor("document.querySelector('.learning-hotspot').dataset.active === '-1'")
+  },
 }
 
 try {

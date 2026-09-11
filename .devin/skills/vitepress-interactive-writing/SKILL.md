@@ -57,6 +57,12 @@ argument-hint: "[主题] [读者] [学习目标]"
 | LearningSteps | 分步流程演示 | 必需 id、label、steps（value/label 数组）、字符串 v-model 为当前步 value；每个 value 对应同名插槽。指示圆点可点击跳转（aria-current="step"），上/下一步按钮在边界自动禁用；根节点带 data-step。 |
 | LearningPopover | 行内术语解释 | 必需 term、content 字符串；置于段落文本中的内联组件，点击展开/关闭解释卡，Esc 或点击外部关闭；trigger 带 aria-expanded。 |
 
+| LearningTerminal | 预录命令序列演示与模拟敲击练习 | 必需 id、label、script（`{ cmd, out? }[]`）；prompt 可选默认 `$`。演示模式上/下一条与重播；动手敲模式比对归一化命令，两次失败后给提示并可一键填入。无 v-model，状态内部管理；根节点带 data-mode（play/type）。 |
+
+| LearningCodeStepper | 代码逐行/逐块讲解 | 必需 id、label、code（多行字符串）、steps（`{ lines: number[], note: string }[]`，lines 为 1-based 行号，支持非连续行）。上/下一步高亮对应行并展示 note，非高亮行降透明；长代码区内滚动时高亮行自动入视口。无 v-model，状态内部管理；根节点带 data-step（当前步下标）。 |
+
+| LearningHotspot | 图标注解 | 必需 id、label、spots（`{ x, y, w, h, title, content }[]`，图上百分比 0–100 的矩形区域）；默认插槽放任意 HTML/SVG 图形，或传 image（+alt）挂图片。区域闲置为淡虚线框，点击整块填色并显示注解（aria-pressed），Esc 或再次点击关闭；注解统一显示在图下面板（role=status）。无 v-model；根节点带 data-active（-1 或下标）。 |
+
 全部组件仅依赖项目 Vue，不依赖 Naive UI/VueUse，不使用全局注册。它们支持 SSR；数字动画只在挂载后运行并在卸载时取消；Popover 的文档级监听在 onMounted 注册、卸载时移除。教程的模拟实验可统一包裹 ClientOnly，但正文和环境警告保留 SSR。
 
 `docs/<专题>/<页面>.md` 的导入路径为 `../../config/.vitepress/theme/components/learning`。其他深度需重新计算，不能盲目复制。示例课程为 `docs/linux/`，仅按需读取相关页，不全量加载。

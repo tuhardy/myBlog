@@ -22,6 +22,9 @@ description: 本站互动教程共用的 Learning 系列组件选型总览与写
 | LearningFlipCard | 自测问答 | 点击 / 回车翻面 | 组件内部 | [flip-card](./flip-card) |
 | LearningQuiz | 单选自测与反馈 | 点选选项 | 组件内部 | [quiz](./quiz) |
 | LearningPopover | 行内术语解释 | 点击开关 | 组件内部 | [popover](./popover) |
+| LearningTerminal | 预录命令序列演示 / 模拟敲击练习 | 步进按钮 / 键盘输入 | 组件内部 | [terminal](./terminal) |
+| LearningCodeStepper | 代码逐行讲解 | 上一步 / 下一步 | 组件内部 | [code-stepper](./code-stepper) |
+| LearningHotspot | 图标注解 | 点击区域 | 组件内部 | [hotspot](./hotspot) |
 <!-- components:table-end（new-component.mjs 在此前插入新组件行） -->
 
 v-model 类组件可与 computed 派生共享状态源，产生可观察联动；内部管理类组件（FlipCard / Quiz / Popover）状态不出组件。

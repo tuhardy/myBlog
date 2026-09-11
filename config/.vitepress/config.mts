@@ -200,6 +200,9 @@ export default defineConfig({
             { text: 'FlipCard',   link: '/notes/learning-components/flip-card' },
             { text: 'Quiz',       link: '/notes/learning-components/quiz' },
             { text: 'Popover',    link: '/notes/learning-components/popover' },
+            { text: 'Terminal',   link: '/notes/learning-components/terminal' },
+            { text: 'CodeStepper', link: '/notes/learning-components/code-stepper' },
+            { text: 'Hotspot',    link: '/notes/learning-components/hotspot' },
             // components:end（new-component.mjs 在此前插入新组件链接）
           ],
         },

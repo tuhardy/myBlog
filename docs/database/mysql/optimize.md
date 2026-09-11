@@ -17,6 +17,8 @@ import {
   LearningFlipCard,
   LearningQuiz,
   LearningPopover,
+  LearningTerminal,
+  LearningCodeStepper,
 } from '../../../config/.vitepress/theme/components/learning'
 
 const flowStep = ref('detect')
@@ -83,6 +85,28 @@ const scenarios = {
     fix: "-- 记住上一页最大 id，把偏移量改成范围条件\nSELECT * FROM orders\nWHERE id > 98210  -- 上一页最后一条的 id\nORDER BY id LIMIT 20;",
   },
 }
+
+const forensicsScript = [
+  { cmd: "SET GLOBAL slow_query_log = 'ON';", out: 'Query OK, 0 rows affected (0.00 sec)' },
+  { cmd: 'SET GLOBAL long_query_time = 1;', out: 'Query OK, 0 rows affected (0.00 sec)' },
+  { cmd: "SET GLOBAL log_queries_not_using_indexes = 'ON';", out: 'Query OK, 0 rows affected (0.00 sec)' },
+  { cmd: "SHOW VARIABLES LIKE 'slow_query_log_file';", out: '+---------------------+-------------------------+\n| Variable_name       | Value                   |\n+---------------------+-------------------------+\n| slow_query_log_file | /var/lib/mysql/slow.log |\n+---------------------+-------------------------+' },
+  { cmd: 'SHOW FULL PROCESSLIST;', out: '+----+------+------------------+-----------------------------+\n| Id | User | State            | Info                        |\n+----+------+------------------+-----------------------------+\n| 42 | app  | Sending data     | SELECT * FROM orders WHERE… |\n| 43 | app  | Waiting for lock | UPDATE orders SET status=…  |\n+----+------+------------------+-----------------------------+' },
+]
+
+const anatomyCode = `SELECT *
+FROM orders
+WHERE YEAR(created_at) = 2026
+  AND phone = 13800000000
+ORDER BY amount DESC
+LIMIT 100000, 20;`
+const anatomySteps = [
+  { lines: [1], note: 'SELECT * 先堵死覆盖索引：除非所有列都在索引上，否则必然要回表。' },
+  { lines: [3], note: 'YEAR() 包裹 created_at，这列上的索引直接失效——病因一。' },
+  { lines: [4], note: 'phone 是 VARCHAR 却传了数字，隐式转换让 phone 索引也失效——病因二。' },
+  { lines: [5], note: 'amount 上没有可用索引时，ORDER BY 只能走 filesort——病因三。' },
+  { lines: [6], note: 'LIMIT 100000, 20：先扫前 100020 行再丢掉 10 万——病因四。' },
+]
 </script>
 
 # 慢 SQL 排查实战：从告警到验证的完整链路
@@ -128,19 +152,15 @@ const scenarios = {
 
 ## 二、取证：让数据库自己交代
 
+连上实验库（或只读实例），把这套取证命令敲一遍——先看「演示」，再切「动手敲」照着剧本练：
+
+<ClientOnly>
+  <LearningTerminal id="slow-sql-forensics" label="慢查询取证会话" :script="forensicsScript" prompt="mysql>" />
+</ClientOnly>
+
 ### 慢查询日志：事后的病历本
 
-```sql
--- 动态开启（重启失效；对已有连接不一定生效）
-SET GLOBAL slow_query_log = 'ON';
-SET GLOBAL long_query_time = 1;                  -- 执行超过 1 秒就记
-SET GLOBAL log_queries_not_using_indexes = 'ON'; -- 没用索引的也记
-
--- 确认日志落在哪个文件
-SHOW VARIABLES LIKE 'slow_query_log_file';
-```
-
-`SET GLOBAL` 需要相应系统变量权限，且只影响新连接。长期使用要写进 `my.cnf`：
+上面三条 `SET GLOBAL` 分别负责「开记录」「定阈值」「连没用索引的也记」。它们需要相应系统变量权限，且只影响新连接、重启失效；长期使用要写进 `my.cnf`：
 
 ```ini
 [mysqld]
@@ -153,11 +173,7 @@ log_queries_not_using_indexes = 1
 
 ### PROCESSLIST：案发现场快照
 
-```sql
-SHOW FULL PROCESSLIST;
-```
-
-看 `Time`、`State`、`Info` 三列：哪条 SQL 跑了多久、卡在什么状态。MySQL 8.0 还可以查 `performance_schema.threads` 或 `sys.session` 拿更细的现场。
+剧本里最后一条 `SHOW FULL PROCESSLIST` 就是现场快照。重点看 `Time`、`State`、`Info` 三列：哪条 SQL 跑了多久、卡在什么状态——比如演示输出里的 `Waiting for lock`。MySQL 8.0 还可以查 `performance_schema.threads` 或 `sys.session` 拿更细的现场。
 
 ### pt-query-digest：把病历汇总成报告
 
@@ -272,6 +288,14 @@ EXPLAIN SELECT * FROM orders WHERE status = 'paid' ORDER BY created_at DESC LIMI
 ::: warning 一个反直觉的点
 小表（几千行以内）全表扫未必比走索引慢，优化器有时会故意选 ALL。重点盯的是「大表 + ALL + 高 rows」的组合，不是见 ALL 就加索引。
 :::
+
+### 合到一条 SQL 里还认得出来吗
+
+五种病因分开看都好认，挤在一条真实 SQL 里试试。下面这条「什么都占了」的查询，逐步拆解：
+
+<ClientOnly>
+  <LearningCodeStepper id="slow-sql-anatomy" label="解剖一条什么都占了的慢 SQL" :code="anatomyCode" :steps="anatomySteps" />
+</ClientOnly>
 
 ## 五、不是所有慢都在执行：也许它在等锁
 
