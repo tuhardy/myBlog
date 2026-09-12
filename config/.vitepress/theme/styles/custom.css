@@ -369,6 +369,18 @@ html.dark .post-list-wrap::before {
   --vp-local-search-highlight-text: var(--vp-c-accent);
 }
 
+/* 落地页搜索词高亮（search-page-highlight.vue）：Highlight API + mark 回退 */
+::highlight(vp-search-hit) {
+  background-color: var(--vp-c-accent-soft);
+  color: var(--vp-c-accent);
+}
+mark.vp-search-mark {
+  background: var(--vp-c-accent-soft);
+  color: var(--vp-c-accent);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
 /* ===== 搜索结果命中徽标（search-hit-badge.vue 注入） ===== */
 .VPLocalSearchBox .hit-badge {
   flex: none;

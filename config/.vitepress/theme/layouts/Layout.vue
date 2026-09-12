@@ -21,6 +21,7 @@ import ContextEmoji from '../components/context-emoji.vue'
 import BackTop from '../components/back-top.vue'
 import FontSwitch from '../components/font-switch.vue'
 import SearchHitBadge from '../components/search-hit-badge.vue'
+import SearchPageHighlight from '../components/search-page-highlight.vue'
 
 const { Layout: DefaultLayout } = DefaultTheme
 </script>
@@ -34,6 +35,7 @@ const { Layout: DefaultLayout } = DefaultTheme
         <GlowParticle />
         <BackTop />
         <SearchHitBadge />
+        <SearchPageHighlight />
       </ClientOnly>
     </template>
 

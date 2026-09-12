@@ -158,10 +158,48 @@ function applyBadges() {
   }
 }
 
+// 落地页高亮接力：结果点击与回车导航都把「查询词+目标地址」写进
+// sessionStorage，由 search-page-highlight 在落地页消费
+// （30s 内有效、读完即删、并校验落地路径与目标一致防误高亮）
+function stashQuery(href: string) {
+  const q = document
+    .querySelector<HTMLInputElement>('.VPLocalSearchBox .search-input')
+    ?.value.trim()
+  if (!q) return
+  try {
+    sessionStorage.setItem(
+      'vp-search-hl',
+      JSON.stringify({ q, to: href, ts: Date.now() }),
+    )
+  } catch {}
+}
+
+function onResultClick(e: MouseEvent) {
+  const a = (e.target as Element).closest?.<HTMLAnchorElement>(
+    '.VPLocalSearchBox a.result',
+  )
+  const href = a?.getAttribute('href')
+  if (href) stashQuery(href)
+}
+
+function onResultKeydown(e: KeyboardEvent) {
+  if (e.key !== 'Enter') return
+  const box = (e.target as Element).closest?.('.VPLocalSearchBox')
+  if (!box) return
+  // 只有焦点在输入框且当前有结果时 Enter 才会触发选中跳转
+  if (!(e.target as Element).matches('.search-input')) return
+  const href = box
+    .querySelector<HTMLAnchorElement>('a.result.selected, a.result')
+    ?.getAttribute('href')
+  if (href) stashQuery(href)
+}
+
 let observer: MutationObserver | undefined
 let scheduled = false
 
 onMounted(() => {
+  document.addEventListener('click', onResultClick, true)
+  document.addEventListener('keydown', onResultKeydown, true)
   observer = new MutationObserver(() => {
     if (scheduled) return
     scheduled = true
@@ -173,7 +211,11 @@ onMounted(() => {
   observer.observe(document.body, { childList: true, subtree: true })
 })
 
-onBeforeUnmount(() => observer?.disconnect())
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  document.removeEventListener('click', onResultClick, true)
+  document.removeEventListener('keydown', onResultKeydown, true)
+})
 </script>
 
 <template />
