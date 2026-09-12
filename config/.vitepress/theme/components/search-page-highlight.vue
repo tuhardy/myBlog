@@ -126,8 +126,18 @@ function consumeStash() {
   } catch {}
   clearHighlights()
   if (!stash?.q || !stash.ts || Date.now() - stash.ts > MAX_AGE_MS) return
-  // 校验落地路径与点击的结果一致，防止标记残留导致无关页面误高亮
-  if (stash.to && stash.to !== location.pathname + location.hash) return
+  // 校验落地页与点击的结果一致，防止标记残留误伤无关页面。
+  // 只比对页面路径——中文锚点在 href 属性与 location.hash 中的
+  // 百分号编码可能不一致；同时归一化 .html / index / 尾斜杠
+  if (stash.to) {
+    const normalize = (p: string) =>
+      p
+        .split('#')[0]
+        .replace(/index\.html$/, '')
+        .replace(/\.html$/, '')
+        .replace(/\/$/, '')
+    if (normalize(stash.to) !== normalize(location.pathname)) return
+  }
   const root = document.querySelector('.vp-doc')
   if (!root) return
   const terms = extractTerms(stash.q)
