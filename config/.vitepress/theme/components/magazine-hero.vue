@@ -528,6 +528,11 @@ onBeforeUnmount(() => {
   }
   .mag-hero__masthead {
     justify-content: space-between;
+    gap: 12px;
+  }
+  /* 极窄屏刊头四项太挤：保留 ISSUE 与签名，藏 SINCE */
+  .mag-hero__masthead .mag-mono:nth-child(3) {
+    display: none;
   }
   .mag-stats dd {
     font-size: 24px;

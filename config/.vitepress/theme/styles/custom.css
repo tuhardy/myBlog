@@ -545,6 +545,21 @@ html.dark .post-list-wrap.is-cards .post-arrow {
   border-top-color: rgba(255, 255, 255, 0.08);
 }
 
+/* 窄屏：区块头与切换控件上下排，避免挤压 */
+@media (max-width: 640px) {
+  .post-list-wrap .post-list__head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .post-list-wrap .post-list__heading {
+    margin: 36px 0 0;
+  }
+  .view-switch {
+    margin-top: 0;
+  }
+}
+
 /* ===== 暗色模式：目录行 hover 底色与点线调亮 ===== */
 html.dark .post-list-wrap .post-row:hover {
   background: rgba(143, 168, 200, 0.07);
