@@ -101,6 +101,7 @@ onBeforeUnmount(() => {
       <span class="mag-mono">ISSUE&nbsp;NO.01</span>
       <span class="mag-mono mag-hero__mastline">TECH&nbsp;NOTES · 技术札记</span>
       <span class="mag-mono">SINCE&nbsp;2026</span>
+      <span class="mag-sign mag-hand" aria-hidden="true">tuhardy</span>
     </header>
 
     <div class="mag-hero__body">
@@ -108,12 +109,28 @@ onBeforeUnmount(() => {
       <div class="mag-hero__main">
         <p class="mag-mono mag-hero__kicker">DEVELOPER'S&nbsp;JOURNAL — 开发者手记</p>
         <h1 class="mag-hero__title">
-          以代码为舟
+          以<em class="mag-mark">代码</em>为舟
           <span class="mag-hero__title-stroke">以文字为桨</span>
+          <span class="mag-note" aria-hidden="true">
+            <span class="mag-hand">敲代码，也写字</span>
+            <svg class="mag-note__arrow" viewBox="0 0 100 42" fill="none">
+              <path
+                d="M88 8 C 66 30, 38 36, 16 28"
+                stroke="var(--vp-c-accent)"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <path
+                d="M16 28 l 13 -4 M16 28 l 5 -12"
+                stroke="var(--vp-c-accent)"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+            </svg>
+          </span>
         </h1>
         <p class="mag-hero__desc">
-          记录前端、后端、中间件与数据库的踩坑实录，<br />
-          也收留一些关于生活的胡思乱想。
+          记录前端、后端、中间件与数据库的踩坑实录，也收留一些关于生活的胡思乱想。
         </p>
         <div class="mag-hero__actions">
           <a class="mag-btn mag-btn--solid" href="#latest">开始阅读</a>
@@ -140,7 +157,7 @@ onBeforeUnmount(() => {
       <figure ref="figureRef" class="mag-hero__figure">
         <div ref="polaroidRef" class="mag-hero__polaroid">
           <div class="mag-hero__portrait">
-            <img :src="avatarSrc" alt="博主头像" />
+            <img :src="avatarSrc" alt="博主与他的狗" />
           </div>
           <div class="mag-hero__caption">
             <span class="mag-hero__caption-main">博主与他的狗</span>
@@ -179,7 +196,8 @@ onBeforeUnmount(() => {
   .mag-hero__desc,
   .mag-hero__actions,
   .mag-stats,
-  .mag-hero__figure {
+  .mag-hero__figure,
+  .mag-note {
     animation: hero-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
   }
   .mag-hero__kicker { animation-delay: 90ms; }
@@ -188,6 +206,7 @@ onBeforeUnmount(() => {
   .mag-hero__actions { animation-delay: 330ms; }
   .mag-stats { animation-delay: 430ms; }
   .mag-hero__figure { animation-delay: 240ms; }
+  .mag-note { animation-delay: 620ms; }
 }
 
 /* ===== 刊头：上下 hairline 包夹的 mono 信息行 ===== */
@@ -206,6 +225,13 @@ onBeforeUnmount(() => {
   color: var(--vp-c-brand-1);
   font-weight: 600;
 }
+/* 刊头手写签名：印记色，微倾斜 */
+.mag-sign {
+  color: var(--vp-c-accent);
+  font-size: 17px;
+  line-height: 1;
+  transform: rotate(-3deg);
+}
 
 /* ===== 不对称两栏：7 : 5 ===== */
 .mag-hero__body {
@@ -218,12 +244,13 @@ onBeforeUnmount(() => {
 
 .mag-hero__kicker {
   margin: 0 0 20px;
-  color: var(--vp-c-brand-1);
+  color: var(--vp-c-accent);
   font-weight: 600;
 }
 
 /* 超大标题：clamp 响应式，第二行描边空心字 */
 .mag-hero__title {
+  position: relative;
   margin: 0 0 24px;
   font-size: clamp(44px, 6vw, 76px);
   font-weight: 800;
@@ -234,16 +261,53 @@ onBeforeUnmount(() => {
 .mag-hero__title-stroke {
   display: block;
   color: transparent;
-  -webkit-text-stroke: 1.5px var(--vp-c-brand-1);
+  -webkit-text-stroke: 1.5px var(--vp-c-accent);
   transition: color 0.35s ease;
 }
-/* 悬停大标题时，描边空心字填回品牌色 */
+/* 悬停大标题时，描边空心字填回印记色 */
 .mag-hero__title:hover .mag-hero__title-stroke {
-  color: var(--vp-c-brand-1);
+  color: var(--vp-c-accent);
+}
+/* 荧光笔高亮：不规则圆角 + 两端渐隐的 accent 底，模拟马克笔扫过 */
+.mag-mark {
+  font-style: normal;
+  padding: 0 0.1em;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    var(--vp-c-accent-soft) 3%,
+    var(--vp-c-accent-soft) 97%,
+    transparent 100%
+  );
+  border-radius: 0.15em 0.5em 0.2em 0.55em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+/* 手写批注：标题右上空白处的 cursive 小字 + 手绘箭头 */
+.mag-note {
+  position: absolute;
+  right: -8px;
+  top: 4%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+  transform: rotate(-4deg);
+  color: var(--vp-c-accent);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0;
+  pointer-events: none;
+}
+.mag-note__arrow {
+  width: 92px;
+  height: auto;
+  margin-right: 6px;
 }
 
 .mag-hero__desc {
   margin: 0 0 36px;
+  max-width: 32em;
   font-size: 17px;
   line-height: 1.9;
   color: var(--vp-c-text-2);
@@ -276,10 +340,10 @@ onBeforeUnmount(() => {
 .mag-btn--ghost {
   padding: 13px 2px;
   color: var(--vp-c-text-1);
-  border-bottom: 2px solid var(--vp-c-brand-1);
+  border-bottom: 2px solid var(--vp-c-accent);
 }
 .mag-btn--ghost:hover {
-  color: var(--vp-c-brand-1);
+  color: var(--vp-c-accent);
 }
 
 /* ===== 数据条：hairline 竖分隔 ===== */
@@ -329,8 +393,26 @@ onBeforeUnmount(() => {
  * 投影用极柔和的多层阴影，hover 时相片回正 + 微抬。
  */
 .mag-hero__figure {
+  position: relative;
   margin: 0;
+  width: 100%;
+  /* 缩小肖像占比：5fr 栏内右对齐限宽，留白交给版面 */
+  max-width: 280px;
+  justify-self: end;
   perspective: 1200px;
+}
+/* 编辑部装裱：偏移线框衬在相片后面 */
+.mag-hero__figure::before {
+  content: "";
+  position: absolute;
+  inset: -14px 14px 14px -14px;
+  border: 1px solid var(--vp-c-accent);
+  opacity: 0.3;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+.mag-hero__figure:hover::before {
+  opacity: 0.55;
 }
 .mag-hero__polaroid {
   position: relative;
@@ -409,7 +491,7 @@ onBeforeUnmount(() => {
   font-family: 'Segoe Script', 'Brush Script MT', 'Comic Sans MS', cursive;
   font-size: 18px;
   line-height: 1.1;
-  color: var(--vp-c-text-2);
+  color: var(--vp-c-accent);
   transform: rotate(-1.5deg);
 }
 .mag-hero__caption-sub {
@@ -427,11 +509,16 @@ onBeforeUnmount(() => {
     padding: 48px 0 40px;
   }
   .mag-hero__figure {
-    max-width: 320px;
+    max-width: 240px;
+    justify-self: center;
     margin: 0 auto;
   }
   .mag-hero__actions {
     margin-bottom: 40px;
+  }
+  /* 窄屏单栏后标题右侧没有批注的落位空间 */
+  .mag-note {
+    display: none;
   }
 }
 @media (max-width: 640px) {

@@ -33,9 +33,15 @@ const features: GalleryFeature[] = [
   },
   {
     icon: '🗄️',
-    title: '数据库 · 架构',
-    tagline: 'MySQL、Redis 缓存三大难题与设计模式沉淀。',
+    title: '数据库',
+    tagline: 'MySQL 执行流水线、索引、MVCC 与 Redis 缓存三大难题。',
     link: '/database/',
+  },
+  {
+    icon: '📐',
+    title: '设计模式',
+    tagline: '单例、工厂、观察者——可复用的套路与它们的边界。',
+    link: '/design-mode/',
   },
   {
     icon: '$_',
@@ -114,7 +120,7 @@ const features: GalleryFeature[] = [
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.28em;
-  color: var(--vp-c-brand-1);
+  color: var(--vp-c-accent);
 }
 
 /* 标题 + 右侧延展 hairline（重置 .vp-doc h2 默认的 border-top 分隔线） */

@@ -15,6 +15,10 @@
   --vp-button-brand-hover-bg: var(--vp-c-brand-3);
   --vp-button-brand-hover-border: var(--vp-c-brand-3);
 
+  /* 个人印记色：朱橙——签名、批注、编号等"手写"元素专用，克制使用 */
+  --vp-c-accent:      #d9530f;
+  --vp-c-accent-soft: rgba(217, 83, 15, 0.26);
+
   /* 全局页面背景：冷灰画布（搭配墨蓝的冷调） */
   --vp-c-bg:       rgb(238, 242, 246);
   --vp-c-bg-soft:  rgb(232, 237, 242);
@@ -33,6 +37,14 @@ html.dark {
   --vp-c-bg:      #1a1b1e;
   --vp-c-bg-soft: #212328;
   --vp-c-bg-alt:  #1a1b1e;
+
+  --vp-c-accent:      #ff8a4d;
+  --vp-c-accent-soft: rgba(255, 138, 77, 0.22);
+}
+
+/* 手写体工具类：签名、批注、图注共用 */
+.mag-hand {
+  font-family: 'Segoe Script', 'Brush Script MT', 'Comic Sans MS', cursive;
 }
 
 /* ===== mono 等宽工具类：杂志风的编号 / 日期 / 页脚标签 ===== */
@@ -135,7 +147,7 @@ html.dark .post-list-wrap::before {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.28em;
-  color: var(--vp-c-brand-1);
+  color: var(--vp-c-accent);
   white-space: nowrap;
 }
 .home-section-title {
@@ -209,7 +221,7 @@ html.dark .post-list-wrap::before {
 }
 .post-list-wrap .post-tag {
   font-weight: 700;
-  color: var(--vp-c-brand-1);
+  color: var(--vp-c-accent);
 }
 .post-list-wrap .post-date {
   color: var(--vp-c-text-3);
