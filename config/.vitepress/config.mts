@@ -258,6 +258,62 @@ export default defineConfig({
       ],
     },
 
+    // 本地搜索：MiniSearch 构建期索引，无需外部服务；
+    // Intl.Segmenter 中文分词——默认分词会把整句中文当成一个词而搜不到
+    search: {
+      provider: 'local',
+      options: {
+        // 结果行下展示带高亮关键字的上下文摘要（用户可在弹窗内切换）
+        detailedView: true,
+        translations: {
+          button: { buttonText: '搜索', buttonAriaLabel: '搜索文档' },
+          modal: {
+            noResultsText: '没有找到相关内容',
+            resetButtonTitle: '清除查询',
+            backButtonTitle: '返回',
+            displayDetails: '显示详细列表',
+            footer: {
+              selectText: '选择',
+              navigateText: '切换',
+              closeText: '关闭',
+              selectKeyAriaLabel: '回车键',
+              navigateUpKeyAriaLabel: '上箭头',
+              navigateDownKeyAriaLabel: '下箭头',
+              closeKeyAriaLabel: 'Esc 键',
+            },
+          },
+        },
+        miniSearch: {
+          options: {
+            // 索引字段去掉 titles：父级标题（含页面 H1）不进入索引，只存
+            // storeFields 供结果行显示「页面 > 小节」路径——页面标题命中时
+            // 只出页级一行，小节标题/正文命中才出带锚点的小节行。
+            fields: ['title', 'text'],
+            tokenize: (text: string) => {
+              const words: string[] = []
+              const segmenter = new Intl.Segmenter('zh', { granularity: 'word' })
+              for (const { segment, isWordLike } of segmenter.segment(text)) {
+                if (isWordLike) words.push(segment)
+              }
+              return words
+            },
+          },
+          // 官方钩子：每次搜索对每条结果记录命中字段（title=标题/text=正文），
+          // 供 search-hit-badge 组件按结果 id 反查注入徽标
+          searchOptions: {
+            filter: (r: { id: string; match?: Record<string, string[]> }) => {
+              try {
+                const map = ((globalThis as any).__vpSearchHits ??= new Map())
+                const fields = Object.values(r.match ?? {}).flat()
+                map.set(r.id, fields.includes('title') ? 'title' : 'text')
+              } catch {}
+              return true
+            },
+          },
+        },
+      },
+    },
+
     // 大纲展开到第 2、3 级标题
     outline: [2, 3],
 

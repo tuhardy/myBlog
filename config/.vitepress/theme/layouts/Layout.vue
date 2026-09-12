@@ -20,6 +20,7 @@ import ProgressBreath from '../components/progress-breath.vue'
 import ContextEmoji from '../components/context-emoji.vue'
 import BackTop from '../components/back-top.vue'
 import FontSwitch from '../components/font-switch.vue'
+import SearchHitBadge from '../components/search-hit-badge.vue'
 
 const { Layout: DefaultLayout } = DefaultTheme
 </script>
@@ -32,6 +33,7 @@ const { Layout: DefaultLayout } = DefaultTheme
         <ProgressBreath />
         <GlowParticle />
         <BackTop />
+        <SearchHitBadge />
       </ClientOnly>
     </template>
 
