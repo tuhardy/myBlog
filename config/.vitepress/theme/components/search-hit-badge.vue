@@ -92,26 +92,31 @@ function ensureFilterControl(box: Element) {
   const count = document.createElement('span')
   count.className = 'hit-filter__count'
   wrap.appendChild(count)
+  // ? 说明：包进 relative 容器，说明卡绝对定位于按钮下方；
+  // 桌面 hover 由 CSS 驱动，click 切换 is-open 供触屏
+  const infoWrap = document.createElement('span')
+  infoWrap.className = 'hit-filter__info-wrap'
   const info = document.createElement('button')
   info.type = 'button'
   info.className = 'hit-filter__info'
   info.textContent = '?'
   info.setAttribute('aria-label', '搜索模式说明')
   info.setAttribute('aria-expanded', 'false')
-  wrap.appendChild(info)
-  bar.insertAdjacentElement('afterend', wrap)
-
   const legend = document.createElement('div')
   legend.className = 'hit-legend'
-  legend.hidden = true
-  legend.innerHTML = MODE_OPTIONS.map(
-    ([mode, label]) =>
-      `<div class="hit-legend__row"><span class="hit-legend__tag">${label}</span><span>${MODE_TIPS[mode]}</span></div>`,
-  ).join('')
-  wrap.insertAdjacentElement('afterend', legend)
+  legend.innerHTML =
+    '<div class="hit-legend__title">筛选模式</div>' +
+    MODE_OPTIONS.map(
+      ([mode, label]) =>
+        `<div class="hit-legend__row"><span class="hit-legend__tag">${label}</span><span>${MODE_TIPS[mode]}</span></div>`,
+    ).join('')
+  infoWrap.appendChild(info)
+  infoWrap.appendChild(legend)
+  wrap.appendChild(infoWrap)
+  bar.insertAdjacentElement('afterend', wrap)
   info.addEventListener('click', () => {
-    legend.hidden = !legend.hidden
-    info.setAttribute('aria-expanded', String(!legend.hidden))
+    const open = legend.classList.toggle('is-open')
+    info.setAttribute('aria-expanded', String(open))
   })
   syncButtons(box)
 }
