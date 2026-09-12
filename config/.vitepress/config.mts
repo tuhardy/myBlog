@@ -130,9 +130,10 @@ export default defineConfig({
         {
           text: 'MySQL 专题',
           items: [
-            { text: '索引底层原理',      link: '/database/mysql/indexing' },
-            { text: '事务 ACID 与 MVCC', link: '/database/mysql/transaction' },
-            { text: '慢 SQL 排查实战',   link: '/database/mysql/optimize' },
+            { text: '一条 SQL 的运行过程', link: '/database/mysql/lifecycle' },
+            { text: '索引底层原理',        link: '/database/mysql/indexing' },
+            { text: '事务隔离与 MVCC',     link: '/database/mysql/transaction' },
+            { text: '慢 SQL 排查实战',     link: '/database/mysql/optimize' },
           ],
         },
       ],
