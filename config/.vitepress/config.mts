@@ -299,15 +299,42 @@ export default defineConfig({
             },
           },
           // 官方钩子：每次搜索对每条结果记录命中字段（title=标题/text=正文），
-          // 供 search-hit-badge 组件按结果 id 反查注入徽标
+          // 官方钩子：每次搜索逐条执行。职责：①记录命中类型供徽标反查
+          // （仅页面总标题算 title——title 字段命中且 titles 父级链为空，
+          // 小节标题归 text）；②按 __vpSearchHitMode 筛选（all 全列 /
+          // page 按页去重保首条 / title 总标题 / text 其余）；③对通过的
+          // 结果计数（真实总数，不受渲染截断影响）。
+          // seen 集合与计数由 search-hit-badge 的 input 监听器清零。
           searchOptions: {
-            filter: (r: { id: string; match?: Record<string, string[]> }) => {
+            filter: (r: {
+              id: string
+              match?: Record<string, string[]>
+              titles?: string[]
+            }) => {
               try {
-                const map = ((globalThis as any).__vpSearchHits ??= new Map())
+                const g = globalThis as any
+                const map = (g.__vpSearchHits ??= new Map())
                 const fields = Object.values(r.match ?? {}).flat()
-                map.set(r.id, fields.includes('title') ? 'title' : 'text')
-              } catch {}
-              return true
+                const hit =
+                  fields.includes('title') && (r.titles?.length ?? 1) === 0
+                    ? 'title'
+                    : 'text'
+                map.set(r.id, hit)
+                const mode = g.__vpSearchHitMode ?? 'all'
+                let keep = true
+                if (mode === 'title' || mode === 'text') {
+                  keep = hit === mode
+                } else if (mode === 'page') {
+                  const seen = (g.__vpSearchSeen ??= new Set())
+                  const pageId = r.id.split('#')[0]
+                  keep = !seen.has(pageId)
+                  if (keep) seen.add(pageId)
+                }
+                if (keep) g.__vpSearchTotal = (g.__vpSearchTotal ?? 0) + 1
+                return keep
+              } catch {
+                return true
+              }
             },
           },
         },

@@ -363,6 +363,12 @@ html.dark .post-list-wrap::before {
   }
 }
 
+/* 搜索高亮改荧光笔印记色（覆盖 VitePress 变量，标题行与摘要通用） */
+.VPLocalSearchBox {
+  --vp-local-search-highlight-bg: var(--vp-c-accent-soft);
+  --vp-local-search-highlight-text: var(--vp-c-accent);
+}
+
 /* ===== 搜索结果命中徽标（search-hit-badge.vue 注入） ===== */
 .VPLocalSearchBox .hit-badge {
   flex: none;
@@ -383,6 +389,90 @@ html.dark .post-list-wrap::before {
 .VPLocalSearchBox .hit-badge--text {
   color: var(--vp-c-text-3);
   border: 1px solid var(--vp-c-divider);
+}
+
+/* 命中位置筛选：全部 / 文章 / 标题 / 正文 + 计数 + 说明 */
+.VPLocalSearchBox .hit-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 16px 10px;
+}
+.VPLocalSearchBox .hit-filter__btn {
+  padding: 4px 12px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--vp-c-text-3);
+  cursor: pointer;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+.VPLocalSearchBox .hit-filter__btn:hover {
+  color: var(--vp-c-text-1);
+  border-color: var(--vp-c-text-3);
+}
+.VPLocalSearchBox .hit-filter__btn.is-on {
+  background: var(--vp-c-brand-1);
+  border-color: var(--vp-c-brand-1);
+  color: #fff;
+}
+.VPLocalSearchBox .hit-filter__btn:focus-visible {
+  outline: 2px solid var(--vp-c-accent);
+  outline-offset: 2px;
+}
+.VPLocalSearchBox .hit-filter__count {
+  margin-left: auto;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 11px;
+  color: var(--vp-c-text-3);
+  white-space: nowrap;
+}
+.VPLocalSearchBox .hit-filter__info {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--vp-c-text-3);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.VPLocalSearchBox .hit-filter__info:hover {
+  color: var(--vp-c-text-1);
+  border-color: var(--vp-c-text-3);
+}
+.VPLocalSearchBox .hit-legend {
+  margin: 0 16px 10px;
+  padding: 8px 12px;
+  border: 1px dashed var(--vp-c-divider);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--vp-c-text-2);
+  display: grid;
+  gap: 6px;
+}
+.VPLocalSearchBox .hit-legend__row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.VPLocalSearchBox .hit-legend__tag {
+  flex: none;
+  width: 40px;
+  text-align: center;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--vp-c-accent);
+  background: var(--vp-c-accent-soft);
+  border-radius: 999px;
+  padding: 1px 0;
 }
 
 /* ===== 导航栏：下边缘渐进阴影线（--nav-p 由 theme/index.ts 滚动写入） ===== */
