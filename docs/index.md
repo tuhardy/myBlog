@@ -5,6 +5,7 @@ layout: home
 ---
 
 <script setup>
+import { onMounted, ref } from 'vue'
 import { data as latestPosts } from '../config/.vitepress/posts.data.ts'
 import { data as stats } from './stats.data'
 import MagazineHero from '../config/.vitepress/theme/components/magazine-hero.vue'
@@ -12,6 +13,20 @@ import FeatureGallery from '../config/.vitepress/theme/components/feature-galler
 
 const BASE = import.meta.env.BASE_URL || '/'
 const toHref = (path) => BASE + String(path || '').replace(/^\//, '')
+
+// 最新文章列表样式：toc（目录式）/ cards（卡片式），localStorage 持久化
+const LIST_STYLE_KEY = 'pref-post-list'
+const listStyle = ref('toc')
+onMounted(() => {
+  try {
+    const saved = localStorage.getItem(LIST_STYLE_KEY)
+    if (saved === 'cards' || saved === 'toc') listStyle.value = saved
+  } catch {}
+})
+function setListStyle(v) {
+  listStyle.value = v
+  try { localStorage.setItem(LIST_STYLE_KEY, v) } catch {}
+}
 </script>
 
 <!-- 01 杂志风 Banner：刊头 + 不对称大标题 + 数据条 + 方形肖像 -->
@@ -21,30 +36,57 @@ const toHref = (path) => BASE + String(path || '').replace(/^\//, '')
 <FeatureGallery />
 
 <!-- 03 最新文章 -->
-<div id="latest" class="post-list-wrap">
+<div id="latest" class="post-list-wrap" :class="{ 'is-cards': listStyle === 'cards' }">
 
-## <span class="mag-mono post-list__num">03 — LATEST POSTS</span><span class="home-section-title">最新文章</span>
+<div class="post-list__head">
+  <h2 class="post-list__heading"><span class="mag-mono post-list__num">03 — LATEST POSTS</span><span class="home-section-title">最新文章</span></h2>
+  <div class="view-switch" role="group" aria-label="文章列表样式">
+    <button
+      type="button"
+      :class="{ 'is-on': listStyle === 'toc' }"
+      :aria-pressed="listStyle === 'toc'"
+      @click="setListStyle('toc')"
+    >目录</button>
+    <button
+      type="button"
+      :class="{ 'is-on': listStyle === 'cards' }"
+      :aria-pressed="listStyle === 'cards'"
+      @click="setListStyle('cards')"
+    >卡片</button>
+  </div>
+</div>
 
 <ul class="post-list">
   <li v-for="(p, i) in latestPosts" :key="p.link" v-reveal="i">
-    <span class="post-no" aria-hidden="true">{{ String(i + 1).padStart(2, '0') }}</span>
-    <div class="post-meta">
-      <span class="post-tag">#{{ p.category }}</span>
-      <span class="post-date">{{ p.date }}</span>
-    </div>
-    <a class="post-title" :href="toHref(p.link)">{{ p.title || '（未命名）' }}</a>
-    <p class="post-excerpt" v-if="p.excerpt">{{ p.excerpt }}</p>
-    <div class="post-foot">
-      <a class="read-more" :href="toHref(p.link)">继续阅读 →</a>
-    </div>
+    <a class="post-row" :href="toHref(p.link)">
+      <span class="post-no" aria-hidden="true">{{ String(i + 1).padStart(2, '0') }}</span>
+      <span class="post-main">
+        <span class="post-line">
+          <span class="post-title">{{ p.title || '（未命名）' }}</span>
+          <span class="post-dots" aria-hidden="true"></span>
+          <span class="post-aside">
+            <span class="post-tag">#{{ p.category }}</span>
+            <span class="post-date">{{ p.date }}</span>
+          </span>
+        </span>
+        <span class="post-excerpt" v-if="p.excerpt">{{ p.excerpt }}</span>
+      </span>
+      <span class="post-arrow" aria-hidden="true">→</span>
+    </a>
   </li>
   <li v-if="!latestPosts || latestPosts.length === 0" v-reveal>
-    <span class="post-no" aria-hidden="true">01</span>
-    <div class="post-meta">
-      <span class="post-tag">#随笔</span>
-    </div>
-    <a class="post-title" :href="toHref('/notes/')">还没有文章，去笔记合集看看 →</a>
-    <p class="post-excerpt">请给 docs 目录下的 md 补上正文内容，构建期会自动按 git 提交时间收录最新三篇。</p>
+    <a class="post-row" :href="toHref('/notes/')">
+      <span class="post-no" aria-hidden="true">01</span>
+      <span class="post-main">
+        <span class="post-line">
+          <span class="post-title">还没有文章，去笔记合集看看</span>
+          <span class="post-dots" aria-hidden="true"></span>
+          <span class="post-aside"><span class="post-tag">#随笔</span></span>
+        </span>
+        <span class="post-excerpt">给 docs 目录下的 md 补上正文内容，构建期会自动按 git 提交时间收录最新三篇。</span>
+      </span>
+      <span class="post-arrow" aria-hidden="true">→</span>
+    </a>
   </li>
 </ul>
 

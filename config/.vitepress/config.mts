@@ -12,6 +12,24 @@ export default defineConfig({
   title: 'My blog',
   description: '一个记录技术、思考与生活的小站。',
 
+  // 霞鹜文楷（屏幕优化版）：jsdelivr CDN 分包按需加载，只作用于展示层标题
+  head: [
+    ['link', { rel: 'preconnect', href: 'https://cdn.jsdelivr.net', crossorigin: '' }],
+    [
+      'link',
+      {
+        rel: 'stylesheet',
+        href: 'https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.7.0/style.css',
+      },
+    ],
+    // 展示字体偏好的首帧前应用：与 FontSwitch 组件的 pref-font 键对应
+    [
+      'script',
+      {},
+      "try{if(localStorage.getItem('pref-font')==='sans')document.documentElement.classList.add('font-sans')}catch(e){}",
+    ],
+  ],
+
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
 

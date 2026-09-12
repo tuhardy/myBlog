@@ -19,6 +19,7 @@ import GlowParticle from '../components/glow-particle.vue'
 import ProgressBreath from '../components/progress-breath.vue'
 import ContextEmoji from '../components/context-emoji.vue'
 import BackTop from '../components/back-top.vue'
+import FontSwitch from '../components/font-switch.vue'
 
 const { Layout: DefaultLayout } = DefaultTheme
 </script>
@@ -31,6 +32,18 @@ const { Layout: DefaultLayout } = DefaultTheme
         <ProgressBreath />
         <GlowParticle />
         <BackTop />
+      </ClientOnly>
+    </template>
+
+    <!-- 导航栏：展示字体切换（文楷 ⇄ 无衬线）；nav-screen 覆盖移动端抽屉菜单 -->
+    <template #nav-bar-content-after>
+      <ClientOnly>
+        <FontSwitch />
+      </ClientOnly>
+    </template>
+    <template #nav-screen-content-after>
+      <ClientOnly>
+        <FontSwitch />
       </ClientOnly>
     </template>
 

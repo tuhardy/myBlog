@@ -131,9 +131,10 @@ const features: GalleryFeature[] = [
   margin: 0 0 40px;
   padding: 0;
   border: 0;
+  font-family: var(--vp-font-display);
   font-size: 28px;
-  font-weight: 800;
-  letter-spacing: 0.01em;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   color: var(--vp-c-text-1);
 }
 .feature-gallery__rule {

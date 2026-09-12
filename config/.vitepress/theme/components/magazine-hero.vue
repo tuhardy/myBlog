@@ -248,14 +248,15 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 
-/* 超大标题：clamp 响应式，第二行描边空心字 */
+/* 超大标题：clamp 响应式，第二行描边空心字；文楷只有 Regular，字重压到 500 避免合成粗体 */
 .mag-hero__title {
   position: relative;
   margin: 0 0 24px;
+  font-family: var(--vp-font-display);
   font-size: clamp(44px, 6vw, 76px);
-  font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -0.01em;
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: 0.01em;
   color: var(--vp-c-text-1);
 }
 .mag-hero__title-stroke {
